@@ -11,6 +11,7 @@ from parallax.widgets.text_editor import TextEditor
 from parallax.widgets.ai_feed import AIFeed
 from parallax.widgets.command_input import CommandInput
 from parallax.core.command_handler import CommandHandler
+from parallax.core.feed_handler import FeedHandler
 
 
 class ParallaxApp(App):
@@ -56,6 +57,7 @@ class ParallaxApp(App):
         self.root_path = root_path
         self.command_handler = CommandHandler()
         self.yankboard = ""  # For yank/paste operations
+        self.feed_handler = FeedHandler(threshold=20)  # Trigger every 20 characters
 
     def compose(self) -> ComposeResult:
         """Compose the application layout."""
@@ -75,6 +77,11 @@ class ParallaxApp(App):
         """Handle mount event."""
         self.title = "Parallax"
         self.sub_title = "Terminal Text Editor"
+
+        # Set up feed handler with AI feed
+        ai_feed = self.query_one("#ai-feed", AIFeed)
+        self.feed_handler.set_ai_feed(ai_feed)
+
         # Start in command mode by default
         command_input = self.query_one("#command-input", CommandInput)
         command_input.focus_input()
@@ -210,3 +217,14 @@ File Operations:
         """Exit current mode and return to command mode."""
         command_input = self.query_one("#command-input", CommandInput)
         command_input.focus_input()
+
+    def on_text_area_changed(self, event: TextArea.Changed) -> None:
+        """
+        Handle text area content changes.
+
+        Args:
+            event: The TextArea.Changed event
+        """
+        # Only track changes in the main text editor
+        if event.text_area.id == "text-area":
+            self.feed_handler.on_text_change(event.text_area.text)

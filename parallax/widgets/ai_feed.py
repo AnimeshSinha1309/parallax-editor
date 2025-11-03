@@ -120,3 +120,31 @@ class AIFeed(Container):
         """
         scroll = self.query_one("#ai-scroll", VerticalScroll)
         scroll.mount(InfoBox(header=header, content=content))
+
+    def remove_info_box(self, index: int) -> bool:
+        """
+        Remove an information box at the specified index.
+
+        Args:
+            index: The index of the box to remove
+
+        Returns:
+            bool: True if successful, False if index is out of range
+        """
+        scroll = self.query_one("#ai-scroll", VerticalScroll)
+        children = list(scroll.children)
+
+        if 0 <= index < len(children):
+            children[index].remove()
+            return True
+        return False
+
+    def get_box_count(self) -> int:
+        """
+        Get the number of information boxes in the feed.
+
+        Returns:
+            int: The number of boxes
+        """
+        scroll = self.query_one("#ai-scroll", VerticalScroll)
+        return len(list(scroll.children))
