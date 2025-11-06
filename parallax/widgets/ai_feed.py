@@ -4,6 +4,8 @@ AI information feed widget for Parallax.
 
 from textual.widgets import Static, Label
 from textual.containers import Container, VerticalScroll
+from textual.message import Message
+from textual import events
 from parallax.config.ai_config import get_ai_feed_config
 
 
@@ -21,13 +23,27 @@ class InfoBox(Container):
         background: $surface;
     }
 
+    InfoBox.selected {
+        border: heavy $accent;
+        background: $boost;
+    }
+
     InfoBox .info-header {
         text-style: bold;
         color: $accent;
         margin-bottom: 1;
     }
 
+    InfoBox.selected .info-header {
+        color: $secondary;
+        text-style: bold;
+    }
+
     InfoBox .info-content {
+        color: $text;
+    }
+
+    InfoBox.selected .info-content {
         color: $text;
     }
     """
@@ -72,6 +88,11 @@ class AIFeed(Container):
     }
     """
 
+    BINDINGS = [
+        ("up,k", "navigate_up", "Move up"),
+        ("down,j", "navigate_down", "Move down"),
+    ]
+
     def __init__(self, **kwargs):
         """
         Initialize the AI feed.
@@ -81,6 +102,8 @@ class AIFeed(Container):
         """
         super().__init__(**kwargs)
         self.config = get_ai_feed_config()
+        self.selected_index = 0
+        self.can_focus = True
 
     def compose(self):
         """Compose the AI feed with information boxes."""
@@ -148,3 +171,88 @@ class AIFeed(Container):
         """
         scroll = self.query_one("#ai-scroll", VerticalScroll)
         return len(list(scroll.children))
+
+    def _update_highlight(self) -> None:
+        """Update the visual highlighting of the selected item."""
+        scroll = self.query_one("#ai-scroll", VerticalScroll)
+        children = list(scroll.children)
+
+        # Remove selection from all boxes
+        for child in children:
+            if isinstance(child, InfoBox):
+                child.remove_class("selected")
+
+        # Add selection to current box
+        if 0 <= self.selected_index < len(children):
+            children[self.selected_index].add_class("selected")
+            # Scroll to make sure the selected item is visible
+            children[self.selected_index].scroll_visible()
+
+    def action_navigate_up(self) -> None:
+        """Navigate to the previous item in the feed."""
+        if self.selected_index > 0:
+            self.selected_index -= 1
+            self._update_highlight()
+
+    def action_navigate_down(self) -> None:
+        """Navigate to the next item in the feed."""
+        box_count = self.get_box_count()
+        if self.selected_index < box_count - 1:
+            self.selected_index += 1
+            self._update_highlight()
+
+    def delete_selected(self) -> tuple[bool, str, str]:
+        """
+        Delete the currently selected item.
+
+        Returns:
+            tuple: (success: bool, header: str, content: str)
+        """
+        scroll = self.query_one("#ai-scroll", VerticalScroll)
+        children = list(scroll.children)
+
+        if 0 <= self.selected_index < len(children):
+            selected_box = children[self.selected_index]
+            header = selected_box.header
+            content = selected_box.content
+
+            # Remove the box
+            selected_box.remove()
+
+            # Update config to stay in sync
+            if 0 <= self.selected_index < len(self.config):
+                self.config.pop(self.selected_index)
+
+            # Update selected index
+            new_count = self.get_box_count()
+            if new_count == 0:
+                self.selected_index = 0
+            elif self.selected_index >= new_count:
+                self.selected_index = new_count - 1
+
+            # Update highlight
+            self._update_highlight()
+
+            return (True, header, content)
+
+        return (False, "", "")
+
+    def on_focus(self) -> None:
+        """Handle focus event - highlight the selected item."""
+        self._update_highlight()
+
+    def get_selected_info(self) -> tuple[str, str] | None:
+        """
+        Get the header and content of the currently selected item.
+
+        Returns:
+            tuple: (header, content) or None if no valid selection
+        """
+        scroll = self.query_one("#ai-scroll", VerticalScroll)
+        children = list(scroll.children)
+
+        if 0 <= self.selected_index < len(children):
+            box = children[self.selected_index]
+            return (box.header, box.content)
+
+        return None

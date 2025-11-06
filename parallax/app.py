@@ -131,17 +131,23 @@ class ParallaxApp(App):
             tree = self.query_one("#directory-tree")
             tree.focus()
             self.notify("Files mode - Press Escape to return", severity="information")
+        elif cmd == ":feed":
+            # Enter feed mode
+            feed = self.query_one("#ai-feed", AIFeed)
+            feed.focus()
+            self.notify("Feed mode - Use j/k or arrows to navigate, :dd to delete - Press Escape to return", severity="information")
         elif cmd == ":help":
             help_text = """Available Commands:
 Navigation:
   :edit     - Enter edit mode
   :files    - Enter file explorer mode
+  :feed     - Enter AI feed mode (navigate with j/k or arrows)
   :gg       - Go to top of file
   :G        - Go to bottom of file
   :<N>      - Go to line N (e.g., :42)
 
 Editing (must be in edit mode):
-  :dd       - Delete current line
+  :dd       - Delete current line (in edit mode) or AI suggestion (in feed mode)
   :dw       - Delete word under cursor
   :x        - Delete character under cursor
   :yy       - Yank (copy) current line
@@ -154,12 +160,27 @@ File Operations:
   :help     - Show this help"""
             self.notify(help_text, severity="information", timeout=15)
         elif cmd == ":dd":
-            # Delete line
-            editor = self.query_one("#text-editor", TextEditor)
-            if editor.delete_line():
-                self.notify("Line deleted", severity="information")
+            # Delete line or AI suggestion depending on context
+            focused = self.focused
+            if focused and focused.id == "ai-feed":
+                # In feed mode - delete AI suggestion
+                feed = self.query_one("#ai-feed", AIFeed)
+                success, header, content = feed.delete_selected()
+                if success:
+                    # Mark this suggestion as deleted
+                    self.feed_handler.mark_suggestion_deleted(header, content)
+                    # Sync feed_handler's feed_items with the AI feed config
+                    self.feed_handler.feed_items = list(feed.config)
+                    self.notify(f"Deleted suggestion: {header}", severity="information")
+                else:
+                    self.notify("Failed to delete suggestion", severity="error")
             else:
-                self.notify("Failed to delete line", severity="error")
+                # In edit mode - delete line
+                editor = self.query_one("#text-editor", TextEditor)
+                if editor.delete_line():
+                    self.notify("Line deleted", severity="information")
+                else:
+                    self.notify("Failed to delete line", severity="error")
         elif cmd == ":dw":
             # Delete word
             editor = self.query_one("#text-editor", TextEditor)
