@@ -5,6 +5,7 @@ Feed handler for dynamic updates based on editor activity.
 import random
 from typing import Optional
 from textual.widgets import TextArea
+from parallax.core.suggestion_tracker import SuggestionTracker
 
 
 class FeedHandler:
@@ -26,6 +27,7 @@ class FeedHandler:
         self.last_content = ""
         self.ai_feed = None
         self.feed_items: list[dict[str, str]] = []
+        self.suggestion_tracker = SuggestionTracker()
 
     def set_ai_feed(self, ai_feed) -> None:
         """
@@ -95,7 +97,7 @@ class FeedHandler:
         """
         # For now, generate simple placeholder content
         # In the future, this could be replaced with LLM-generated suggestions
-        suggestions = [
+        all_suggestions = [
             {
                 "header": "Code Suggestion",
                 "content": "Consider adding type hints to improve code clarity and catch type-related bugs early."
@@ -130,7 +132,20 @@ class FeedHandler:
             },
         ]
 
-        return random.choice(suggestions)
+        # Filter out deleted suggestions
+        available_suggestions = [
+            s for s in all_suggestions
+            if not self.suggestion_tracker.is_deleted(s["header"], s["content"])
+        ]
+
+        # If all suggestions are deleted, return a fallback
+        if not available_suggestions:
+            return {
+                "header": "AI Assistant",
+                "content": "Keep coding! You're doing great."
+            }
+
+        return random.choice(available_suggestions)
 
     def push_item(self, header: str, content: str, position: Optional[int] = None) -> None:
         """
@@ -180,3 +195,13 @@ class FeedHandler:
             int: Current character count
         """
         return self.char_count
+
+    def mark_suggestion_deleted(self, header: str, content: str) -> None:
+        """
+        Mark a suggestion as deleted to avoid re-surfacing it.
+
+        Args:
+            header: The header of the deleted suggestion
+            content: The content of the deleted suggestion
+        """
+        self.suggestion_tracker.mark_deleted(header, content)
