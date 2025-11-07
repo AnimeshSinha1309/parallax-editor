@@ -7,6 +7,7 @@ from typing import Optional
 from textual.widgets import TextArea
 from textual.containers import Container
 from parallax.core.syntax_highlighter import SyntaxHighlighter
+from parallax.widgets.ghost_text_area import GhostTextArea
 
 
 class TextEditor(Container):
@@ -45,8 +46,8 @@ class TextEditor(Container):
         self.ghost_text_visible: bool = False
 
     def compose(self):
-        """Compose the text editor with a TextArea widget."""
-        text_area = TextArea(
+        """Compose the text editor with a GhostTextArea widget."""
+        text_area = GhostTextArea(
             id="text-area",
             show_line_numbers=True,
             theme="monokai",
@@ -335,34 +336,35 @@ class TextEditor(Container):
         """
         Set the ghost text completion to display.
 
-        TODO: Implement ghost text rendering in the editor.
-        Currently just stores the text without displaying it.
-
         Args:
             completion: The completion text to show as ghost text
         """
         self.ghost_text = completion
         self.ghost_text_visible = True
-        # TODO: Trigger render update to show ghost text at cursor position
-        print(f"[TextEditor] Ghost text set: {completion[:50]}...")
+
+        # Delegate to GhostTextArea
+        try:
+            text_area = self.query_one("#text-area", GhostTextArea)
+            text_area.set_ghost_text(completion)
+            print(f"[TextEditor] Ghost text set: {completion[:50]}...")
+        except Exception as e:
+            print(f"[TextEditor] Error setting ghost text: {e}")
 
     def clear_ghost_text(self) -> None:
-        """
-        Clear the current ghost text completion.
-
-        TODO: Implement ghost text clearing in the editor.
-        Currently just clears the internal state.
-        """
+        """Clear the current ghost text completion."""
         self.ghost_text = None
         self.ghost_text_visible = False
-        # TODO: Trigger render update to remove ghost text
+
+        # Delegate to GhostTextArea
+        try:
+            text_area = self.query_one("#text-area", GhostTextArea)
+            text_area.clear_ghost_text()
+        except Exception as e:
+            print(f"[TextEditor] Error clearing ghost text: {e}")
 
     def accept_ghost_text(self) -> bool:
         """
         Accept the ghost text completion and insert it at cursor position.
-
-        TODO: Implement ghost text acceptance.
-        Should insert the completion text at the current cursor position.
 
         Returns:
             bool: True if ghost text was accepted, False if no ghost text
@@ -371,24 +373,15 @@ class TextEditor(Container):
             return False
 
         try:
-            text_area = self.query_one("#text-area", TextArea)
-            cursor_row, cursor_col = text_area.cursor_location
-            lines = text_area.text.split('\n')
+            text_area = self.query_one("#text-area", GhostTextArea)
+            result = text_area.accept_ghost_text()
 
-            if cursor_row >= len(lines):
-                return False
+            if result:
+                self.ghost_text = None
+                self.ghost_text_visible = False
+                print(f"[TextEditor] Ghost text accepted")
 
-            # TODO: Insert ghost text at cursor position
-            # For now, just clear it
-            line = lines[cursor_row]
-            new_line = line[:cursor_col] + self.ghost_text + line[cursor_col:]
-            lines[cursor_row] = new_line
-
-            text_area.load_text('\n'.join(lines))
-            text_area.move_cursor((cursor_row, cursor_col + len(self.ghost_text)))
-
-            self.clear_ghost_text()
-            return True
+            return result
         except Exception as e:
             print(f"[TextEditor] Error accepting ghost text: {e}")
             return False

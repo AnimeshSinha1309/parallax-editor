@@ -13,6 +13,7 @@ from parallax.widgets.command_input import CommandInput
 from parallax.core.command_handler import CommandHandler
 from parallax.core.feed_handler import FeedHandler
 from fulfillers import DummyFulfiller, Card, CardType
+from textual import events
 
 
 class ParallaxApp(App):
@@ -257,7 +258,40 @@ File Operations:
         """
         # Only track changes in the main text editor
         if event.text_area.id == "text-area":
+            # Clear ghost text when user types (any change)
+            editor = self.query_one("#text-editor", TextEditor)
+            if editor.ghost_text_visible:
+                editor.clear_ghost_text()
+
             # Get cursor position from text area
             cursor_pos = event.text_area.cursor_location
             # Pass text and cursor position to feed handler
             self.feed_handler.on_text_change(event.text_area.text, cursor_pos)
+
+    def on_key(self, event: events.Key) -> None:
+        """
+        Handle keyboard events for ghost text completion.
+
+        Args:
+            event: The keyboard event
+        """
+        # Only handle ghost text keys when in edit mode (text area has focus)
+        focused = self.focused
+        if not focused or focused.id != "text-area":
+            return
+
+        editor = self.query_one("#text-editor", TextEditor)
+
+        # Tab or Right arrow: Accept ghost text completion
+        if event.key in ["tab", "right"]:
+            if editor.ghost_text_visible:
+                if editor.accept_ghost_text():
+                    event.prevent_default()
+                    event.stop()
+                    return
+
+        # Escape: Dismiss ghost text (already handled by action_exit_to_command, but also clear ghost text)
+        elif event.key == "escape":
+            if editor.ghost_text_visible:
+                editor.clear_ghost_text()
+                # Don't prevent default - let it exit to command mode
