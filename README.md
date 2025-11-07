@@ -92,13 +92,26 @@ The AI feed now supports interactive markdown links with rich formatting:
 
 #### Navigation
 
-When clicking file links, the file opens in a new tmux window with neovim:
+When clicking file links, the behavior depends on whether you're running in tmux:
 
+**When running in tmux** (recommended for best experience):
+- File opens in a new tmux window with neovim
 - **Switch back to Parallax**: `Ctrl-b p` or `Ctrl-b n`
 - **List all windows**: `Ctrl-b w`
 - **Split screen from neovim**: `Ctrl-b "` (horizontal) or `Ctrl-b %` (vertical)
 - **Navigate between panes**: `Ctrl-b arrow-keys`
-- **Close neovim**: `:q` or `:wq` to save and quit
+
+**When NOT running in tmux**:
+- Parallax suspends and neovim takes over the terminal
+- Edit your file as normal in neovim
+- When you exit neovim (`:q` or `:wq`), Parallax automatically resumes
+
+To start Parallax in tmux:
+```bash
+tmux new-session "python -m parallax.main"
+# Or if tmux is already running:
+tmux new-window "python -m parallax.main"
+```
 
 #### Markdown Formatting
 
@@ -106,8 +119,6 @@ The AI feed also supports:
 - **Bold text**: `**bold**`
 - *Italic text*: `*italic*`
 - Bullet points (already working)
-
-**Note**: This feature requires running Parallax inside a tmux session for file links to work.
 
 ## Project Structure
 

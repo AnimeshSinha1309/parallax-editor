@@ -18,14 +18,16 @@ from urllib.parse import urlparse
 class LinkHandler:
     """Handles different types of links from the AI feed."""
 
-    def __init__(self, root_path: str = None):
+    def __init__(self, root_path: str = None, app=None):
         """
         Initialize the link handler.
 
         Args:
             root_path: The root path for resolving relative file paths
+            app: The Textual app instance (for suspend/resume)
         """
         self.root_path = root_path or os.getcwd()
+        self.app = app
 
     def handle_link(self, href: str) -> tuple[bool, str]:
         """
@@ -76,8 +78,9 @@ class LinkHandler:
 
     def _open_file_link(self, file_path: str) -> tuple[bool, str]:
         """
-        Open a file link in neovim using tmux.
+        Open a file link in neovim.
 
+        Uses tmux new-window if in tmux, otherwise suspends the app and opens neovim directly.
         Supports line numbers in the format: path/to/file:42
 
         Args:
@@ -100,27 +103,38 @@ class LinkHandler:
         # Normalize the path
         file_path = os.path.normpath(file_path)
 
-        # Check if we're in a tmux session
-        if not self._is_in_tmux():
-            return (False, "Not running in tmux - cannot open file in overlay")
-
-        # Build the neovim command
+        # Build the neovim command arguments
         if line_number:
-            nvim_cmd = f"nvim +{line_number} '{file_path}'"
+            nvim_args = ['nvim', f'+{line_number}', file_path]
         else:
-            nvim_cmd = f"nvim '{file_path}'"
+            nvim_args = ['nvim', file_path]
 
-        # Open in a new tmux window
-        try:
-            # Create a new tmux window with neovim
-            tmux_cmd = ['tmux', 'new-window', '-n', 'nvim', nvim_cmd]
-            subprocess.run(tmux_cmd, check=True)
-
-            return (True, f"Opened {file_path}" + (f" at line {line_number}" if line_number else ""))
-        except subprocess.CalledProcessError as e:
-            return (False, f"Failed to open file in tmux: {str(e)}")
-        except Exception as e:
-            return (False, f"Error opening file: {str(e)}")
+        # Check if we're in a tmux session
+        if self._is_in_tmux():
+            # Use tmux new-window for better experience (can switch between windows)
+            try:
+                nvim_cmd = ' '.join(f"'{arg}'" if ' ' in arg else arg for arg in nvim_args)
+                tmux_cmd = ['tmux', 'new-window', '-n', 'nvim', nvim_cmd]
+                subprocess.run(tmux_cmd, check=True)
+                return (True, f"Opened {file_path}" + (f" at line {line_number}" if line_number else ""))
+            except subprocess.CalledProcessError as e:
+                return (False, f"Failed to open file in tmux: {str(e)}")
+            except Exception as e:
+                return (False, f"Error opening file: {str(e)}")
+        else:
+            # Not in tmux - suspend the app and open neovim directly
+            try:
+                if self.app:
+                    # Use Textual's suspend functionality for clean terminal handoff
+                    with self.app.suspend():
+                        subprocess.run(nvim_args)
+                    return (True, f"Opened {file_path}" + (f" at line {line_number}" if line_number else ""))
+                else:
+                    # Fallback: just run neovim (may not handle terminal state perfectly)
+                    subprocess.run(nvim_args)
+                    return (True, f"Opened {file_path}" + (f" at line {line_number}" if line_number else ""))
+            except Exception as e:
+                return (False, f"Error opening file: {str(e)}")
 
     def _is_in_tmux(self) -> bool:
         """

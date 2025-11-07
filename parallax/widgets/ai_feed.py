@@ -111,7 +111,11 @@ class AIFeed(Container):
         self.selected_index = 0
         self.can_focus = True
         self.root_path = root_path
-        self.link_handler = LinkHandler(root_path=root_path)
+        self.link_handler = None  # Will be initialized in on_mount
+
+    def on_mount(self) -> None:
+        """Initialize link handler after mount when app is available."""
+        self.link_handler = LinkHandler(root_path=self.root_path, app=self.app)
 
     def compose(self):
         """Compose the AI feed with information boxes."""
@@ -256,6 +260,11 @@ class AIFeed(Container):
         Args:
             event: The link clicked event containing the href
         """
+        if not self.link_handler:
+            if hasattr(self.app, 'notify'):
+                self.app.notify("Link handler not initialized", severity="error")
+            return
+
         success, message = self.link_handler.handle_link(event.href)
 
         # You can optionally notify the user about the action
