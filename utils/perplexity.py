@@ -1,9 +1,15 @@
 """Perplexity API utilities for web search."""
 
 import os
+from pathlib import Path
 from typing import Dict, List, Optional, Any
 import requests
 from dataclasses import dataclass
+from dotenv import load_dotenv
+
+# Load environment variables from .env file in project root
+_project_root = Path(__file__).parent.parent
+load_dotenv(_project_root / ".env")
 
 
 @dataclass
@@ -25,8 +31,9 @@ class PerplexitySearch:
     to perform Google-like searches and get AI-summarized results.
 
     Requirements:
-        - PERPLEXITY_API_KEY environment variable must be set
+        - PERPLEXITY_API_KEY in .env file or environment variable
         - requests library (already in dependencies)
+        - python-dotenv library (already in dependencies)
 
     Usage:
         # Basic search
@@ -65,7 +72,7 @@ class PerplexitySearch:
         self.api_key = api_key or os.environ.get("PERPLEXITY_API_KEY")
         if not self.api_key:
             raise ValueError(
-                "PERPLEXITY_API_KEY not found. Set it in environment or pass to constructor."
+                "PERPLEXITY_API_KEY not found. Set it in .env file or environment."
             )
 
         self.model = model
@@ -205,68 +212,3 @@ class PerplexitySearch:
             return response.status_code in (200, 429)  # 429 = rate limited but valid
         except:
             return False
-
-
-def search_google(
-    query: str,
-    api_key: Optional[str] = None,
-    **kwargs
-) -> SearchResponse:
-    """
-    Convenience function to perform a Google-like search via Perplexity.
-
-    Args:
-        query: Search query
-        api_key: Optional API key (uses env var if not provided)
-        **kwargs: Additional arguments passed to PerplexitySearch.search()
-
-    Returns:
-        SearchResponse with results
-
-    Example:
-        result = search_google("Python type hints tutorial")
-        if result.success:
-            print(result.content)
-    """
-    searcher = PerplexitySearch(api_key=api_key)
-    return searcher.search(query, **kwargs)
-
-
-# Example usage and testing
-if __name__ == "__main__":
-    import sys
-
-    # Check if API key is available
-    api_key = os.environ.get("PERPLEXITY_API_KEY")
-    if not api_key:
-        print("Error: PERPLEXITY_API_KEY environment variable not set")
-        print("\nTo use this utility:")
-        print("1. Get an API key from https://www.perplexity.ai/settings/api")
-        print("2. Set it in your .env file:")
-        print("   PERPLEXITY_API_KEY=your-api-key-here")
-        print("3. Or export it:")
-        print("   export PERPLEXITY_API_KEY=your-api-key-here")
-        sys.exit(1)
-
-    # Test search
-    print("Testing Perplexity search...")
-    searcher = PerplexitySearch()
-
-    # Check availability
-    print(f"API available: {searcher.is_available()}")
-
-    # Perform search
-    query = sys.argv[1] if len(sys.argv) > 1 else "What is ripgrep?"
-    print(f"\nSearching for: {query}\n")
-
-    result = searcher.search(query)
-
-    if result.success:
-        print("✓ Search successful\n")
-        print("Result:")
-        print(result.content)
-        print("\nCitations:")
-        for i, citation in enumerate(result.citations, 1):
-            print(f"  [{i}] {citation}")
-    else:
-        print(f"✗ Search failed: {result.error}")
