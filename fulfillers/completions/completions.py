@@ -3,13 +3,20 @@ from signatures.completions_singnature import InlineCompletion
 from fulfillers.base import Fulfiller
 from fulfillers.models import Card, CardType
 from typing import List, Tuple, Optional
+from abc import ABCMeta
 import dspy
 import logging
 
 logger = logging.getLogger("parallax.completions")
 
 
-class Completions(Fulfiller, dspy.Module):
+# Create a combined metaclass to resolve the conflict between ABCMeta and dspy.Module's metaclass
+class CombinedMeta(ABCMeta, type(dspy.Module)):
+    """Combined metaclass for classes that inherit from both ABC and dspy.Module."""
+    pass
+
+
+class Completions(Fulfiller, dspy.Module, metaclass=CombinedMeta):
 
     def __init__(self, **kwargs):
         """Initialize the Completions fulfiller with DSPy module setup."""
