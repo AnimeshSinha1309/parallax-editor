@@ -9,6 +9,8 @@ import logging
 
 logger = logging.getLogger("parallax.completions")
 
+dspy.configure(lm=get_lm())
+
 
 # Create a combined metaclass to resolve the conflict between ABCMeta and dspy.Module's metaclass
 class CombinedMeta(ABCMeta, type(dspy.Module)):

@@ -22,7 +22,7 @@ class InlineCompletion(dspy.Signature):
     completion: str = dspy.OutputField(
         desc=(
             "Completion text that can be displayed inline. Preserve indentation relative to the '<cursor>' marker, "
-            "avoid trailing explanations, and limit output to ≤6 lines to respect the ghost-text affordance."
+            "avoid trailing explanations, and ensure the output is atleast 50 characters long and limit output to ≤200 characters to respect the ghost-text affordance."
         )
     )
     confidence: Optional[float] = dspy.OutputField(
