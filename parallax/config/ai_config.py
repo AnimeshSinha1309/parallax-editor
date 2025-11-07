@@ -24,11 +24,11 @@ AI_FEED_CONFIG = [
         "header": "References",
         "content": (
             "Placeholder for relevant references:\n\n"
-            "• API documentation links\n"
-            "• Related code sections\n"
-            "• External resources\n"
-            "• Stack Overflow threads\n"
-            "• Best practices guides"
+            "• [Textual Documentation](https://textual.textualize.io/)\n"
+            "• [Python Style Guide](https://peps.python.org/pep-0008/)\n"
+            "• **Local files**: [ai_feed.py](./parallax/widgets/ai_feed.py)\n"
+            "• [app.py at line 62](file:///home/user/parallax-editor/parallax/app.py:62)\n"
+            "• *Example relative path*: [README.md](./README.md)"
         )
     },
     {
