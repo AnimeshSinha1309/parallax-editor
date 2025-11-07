@@ -7,6 +7,7 @@ context on expected agent behaviors.
 """
 
 from .completion import GenerateInlineCompletion
+from .query_generator import RGQueryGenerator
 
-__all__ = ["GenerateInlineCompletion"]
+__all__ = ["GenerateInlineCompletion", "RGQueryGenerator"]
 
