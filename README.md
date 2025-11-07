@@ -17,7 +17,7 @@ This repository includes a lightweight Python SDK for code search using ripgrep,
 
 ```python
 import asyncio
-from code_search import CodeSearch
+from fulfillers.codesearch import CodeSearch
 
 async def main():
     search = CodeSearch()
@@ -64,7 +64,7 @@ pip install -e ".[dev]"
 python -m pytest tests/ -v
 
 # Run validation script
-python validate.py
+python tests/validate.py
 ```
 
 ### Documentation

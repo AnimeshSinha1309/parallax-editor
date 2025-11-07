@@ -4,11 +4,11 @@ import pytest
 import os
 import sys
 
-# Add src to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
+# Add fulfillers to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "fulfillers"))
 
-from code_search import CodeSearch, SearchMatch, SearchResult
-from code_search.ripgrep import RipgrepSearch
+from codesearch import CodeSearch, SearchMatch, SearchResult
+from codesearch.ripgrep import RipgrepSearch
 
 FIXTURES_DIR = os.path.join(os.path.dirname(__file__), "fixtures")
 

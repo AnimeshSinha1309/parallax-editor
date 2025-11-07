@@ -2,10 +2,11 @@
 
 import asyncio
 import json
-from typing import List
+from typing import List, Optional
 
 from .base import CodeSearchBackend
 from .models import SearchMatch, SearchResult
+from .context import RipgrepContext
 
 
 class RipgrepSearch(CodeSearchBackend):
@@ -20,10 +21,20 @@ class RipgrepSearch(CodeSearchBackend):
         - Must be in PATH
     """
 
+    def __init__(self, context: Optional[RipgrepContext] = None):
+        """
+        Initialize RipgrepSearch with an optional context.
+
+        Args:
+            context: RipgrepContext defining which directories/files to search.
+                    If None, a new context will be created when needed.
+        """
+        self.context = context
+
     async def search(
         self,
         query: str,
-        directory: str,
+        directory: Optional[str] = None,
         max_results: int = 50,
         context_lines: int = 2,
         case_sensitive: bool = False,
@@ -33,7 +44,7 @@ class RipgrepSearch(CodeSearchBackend):
 
         Args:
             query: Regex pattern to search for
-            directory: Directory to search in
+            directory: Directory to search in. If None, uses paths from context.
             max_results: Maximum total matches to return (default 50)
             context_lines: Lines of context before/after match (default 2)
             case_sensitive: Whether search is case-sensitive (default False)
@@ -42,9 +53,27 @@ class RipgrepSearch(CodeSearchBackend):
             SearchResult with matches or error.
         """
         try:
+            # Determine search paths
+            if directory is not None:
+                # Use provided directory (backwards compatible)
+                search_paths = [directory]
+            else:
+                # Use context paths
+                if self.context is None:
+                    self.context = RipgrepContext()
+                try:
+                    search_paths = [str(p) for p in self.context.get_paths()]
+                except Exception as e:
+                    return SearchResult(
+                        matches=[],
+                        total_matches=0,
+                        query=query,
+                        error=f"Context error: {str(e)}",
+                    )
+
             # Build ripgrep command
             cmd = self._build_command(
-                query, directory, max_results, context_lines, case_sensitive
+                query, search_paths, max_results, context_lines, case_sensitive
             )
 
             # Execute with timeout
@@ -96,7 +125,7 @@ class RipgrepSearch(CodeSearchBackend):
     def _build_command(
         self,
         query: str,
-        directory: str,
+        search_paths: List[str],
         max_results: int,
         context_lines: int,
         case_sensitive: bool,
@@ -114,8 +143,11 @@ class RipgrepSearch(CodeSearchBackend):
         if not case_sensitive:
             cmd.append("-i")
 
-        # Add query and directory
-        cmd.extend([query, directory])
+        # Add query
+        cmd.append(query)
+
+        # Add all search paths
+        cmd.extend(search_paths)
 
         return cmd
 

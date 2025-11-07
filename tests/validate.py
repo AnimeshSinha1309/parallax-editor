@@ -5,10 +5,10 @@ import asyncio
 import sys
 import os
 
-# Add src to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
+# Add fulfillers to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "fulfillers"))
 
-from code_search import CodeSearch
+from codesearch import CodeSearch
 
 
 async def validate():
@@ -80,7 +80,7 @@ async def validate():
     print("🎉 All validation tests passed!")
     print("\nSDK is ready to use!")
     print("\nQuick start:")
-    print("  from code_search import CodeSearch")
+    print("  from fulfillers.codesearch import CodeSearch")
     print("  search = CodeSearch()")
     print("  result = await search.search('pattern', '/path/to/code')")
     print("=" * 50)
