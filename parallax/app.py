@@ -67,7 +67,7 @@ class ParallaxApp(App):
             with Horizontal(id="panes"):
                 yield FileExplorer(root_path=self.root_path, id="file-explorer")
                 yield TextEditor(id="text-editor")
-                yield AIFeed(id="ai-feed")
+                yield AIFeed(root_path=self.root_path, id="ai-feed")
 
             yield CommandInput(id="command-input")
 

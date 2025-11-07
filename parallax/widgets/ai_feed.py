@@ -2,11 +2,12 @@
 AI information feed widget for Parallax.
 """
 
-from textual.widgets import Static, Label
+from textual.widgets import Static, Label, Markdown
 from textual.containers import Container, VerticalScroll
 from textual.message import Message
 from textual import events
 from parallax.config.ai_config import get_ai_feed_config
+from parallax.core.link_handler import LinkHandler
 
 
 class InfoBox(Container):
@@ -41,10 +42,14 @@ class InfoBox(Container):
 
     InfoBox .info-content {
         color: $text;
+        link-color: blue;
+        link-style: underline;
     }
 
     InfoBox.selected .info-content {
         color: $text;
+        link-color: blue;
+        link-style: underline;
     }
     """
 
@@ -64,7 +69,7 @@ class InfoBox(Container):
     def compose(self):
         """Compose the info box with header and content."""
         yield Label(self.header, classes="info-header")
-        yield Static(self.content, classes="info-content")
+        yield Markdown(self.content, classes="info-content")
 
 
 class AIFeed(Container):
@@ -93,17 +98,24 @@ class AIFeed(Container):
         ("down,j", "navigate_down", "Move down"),
     ]
 
-    def __init__(self, **kwargs):
+    def __init__(self, root_path: str = ".", **kwargs):
         """
         Initialize the AI feed.
 
         Args:
+            root_path: The root path for resolving relative file links
             **kwargs: Additional keyword arguments for Container
         """
         super().__init__(**kwargs)
         self.config = get_ai_feed_config()
         self.selected_index = 0
         self.can_focus = True
+        self.root_path = root_path
+        self.link_handler = None  # Will be initialized in on_mount
+
+    def on_mount(self) -> None:
+        """Initialize link handler after mount when app is available."""
+        self.link_handler = LinkHandler(root_path=self.root_path, app=self.app)
 
     def compose(self):
         """Compose the AI feed with information boxes."""
@@ -240,6 +252,27 @@ class AIFeed(Container):
     def on_focus(self) -> None:
         """Handle focus event - highlight the selected item."""
         self._update_highlight()
+
+    def on_markdown_link_clicked(self, event: Markdown.LinkClicked) -> None:
+        """
+        Handle link clicks in markdown content.
+
+        Args:
+            event: The link clicked event containing the href
+        """
+        if not self.link_handler:
+            if hasattr(self.app, 'notify'):
+                self.app.notify("Link handler not initialized", severity="error")
+            return
+
+        success, message = self.link_handler.handle_link(event.href)
+
+        # You can optionally notify the user about the action
+        if hasattr(self.app, 'notify'):
+            if success:
+                self.app.notify(message, severity="information")
+            else:
+                self.app.notify(message, severity="error")
 
     def get_selected_info(self) -> tuple[str, str] | None:
         """

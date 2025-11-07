@@ -18,6 +18,7 @@ Parallax is a vim-inspired terminal text editor featuring a three-pane interface
 - 🤖 **AI Integration Ready**: Modular design for easy AI endpoint integration
 - ⌨️ **Command Mode**: Vim-style command interface (`:command`)
 - 🧩 **Modular Architecture**: Clean separation of concerns for easy maintenance
+- 🔗 **Markdown Links in AI Feed**: Interactive links with file and web URL support
 
 ## Requirements
 
@@ -64,6 +65,61 @@ Press `:` to enter command mode at the bottom of the screen. Type your command a
 
 *Note: Command handlers are placeholders and will be implemented in future versions.*
 
+### AI Feed Markdown Links
+
+The AI feed now supports interactive markdown links with rich formatting:
+
+#### Supported Link Types
+
+1. **Web URLs**: Opens in your default browser
+   ```markdown
+   [Textual Documentation](https://textual.textualize.io/)
+   [Python Guide](https://docs.python.org/)
+   ```
+
+2. **File Links (Absolute)**: Opens in neovim via tmux overlay
+   ```markdown
+   [Open config](file:///path/to/config.py)
+   [View at line 42](file:///path/to/file.py:42)
+   ```
+
+3. **Relative File Paths**: Resolved from project root
+   ```markdown
+   [README](./README.md)
+   [Main app](./parallax/app.py)
+   [Widget at line 100](./parallax/widgets/ai_feed.py:100)
+   ```
+
+#### Navigation
+
+When clicking file links, the behavior depends on whether you're running in tmux:
+
+**When running in tmux** (recommended for best experience):
+- File opens in a new tmux window with neovim
+- **Switch back to Parallax**: `Ctrl-b p` or `Ctrl-b n`
+- **List all windows**: `Ctrl-b w`
+- **Split screen from neovim**: `Ctrl-b "` (horizontal) or `Ctrl-b %` (vertical)
+- **Navigate between panes**: `Ctrl-b arrow-keys`
+
+**When NOT running in tmux**:
+- Parallax suspends and neovim takes over the terminal
+- Edit your file as normal in neovim
+- When you exit neovim (`:q` or `:wq`), Parallax automatically resumes
+
+To start Parallax in tmux:
+```bash
+tmux new-session "python -m parallax.main"
+# Or if tmux is already running:
+tmux new-window "python -m parallax.main"
+```
+
+#### Markdown Formatting
+
+The AI feed also supports:
+- **Bold text**: `**bold**`
+- *Italic text*: `*italic*`
+- Bullet points (already working)
+
 ## Project Structure
 
 ```
@@ -83,6 +139,7 @@ parallax/
 │   ├── core/
 │   │   ├── __init__.py
 │   │   ├── command_handler.py # Command processing logic
+│   │   ├── link_handler.py     # Markdown link handling (file/web)
 │   │   └── syntax_highlighter.py # Syntax highlighting
 │   └── config/
 │       ├── __init__.py
