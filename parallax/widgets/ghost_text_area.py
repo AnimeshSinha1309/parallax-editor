@@ -132,7 +132,7 @@ class GhostTextArea(TextArea):
         """Handle key events to manage ghost text."""
         # Clear ghost text on most keystrokes (except Tab, Right, Escape which are handled in ParallaxApp)
         if self.ghost_text_visible and event.key not in ["tab", "right", "escape"]:
+            logger.debug(f"Key '{event.key}' pressed, clearing ghost text")
             self.clear_ghost_text()
-
-        # Call parent handler
-        return super().on_key(event)
+        # Event will bubble up naturally in Textual's event system
+        # No need to call super() - TextArea doesn't have on_key method
