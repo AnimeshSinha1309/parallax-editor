@@ -37,12 +37,12 @@ class PerplexitySearch:
             print("Sources:", result.citations)
 
         # Custom model
-        searcher = PerplexitySearch(model="sonar-large-online")
+        searcher = PerplexitySearch(model="sonar")
         result = searcher.search("latest Python features")
     """
 
     BASE_URL = "https://api.perplexity.ai"
-    DEFAULT_MODEL = "sonar-small-online"
+    DEFAULT_MODEL = "sonar"
 
     def __init__(
         self,
@@ -55,11 +55,13 @@ class PerplexitySearch:
 
         Args:
             api_key: Perplexity API key. If None, reads from PERPLEXITY_API_KEY env var.
-            model: Model to use for search. Default is sonar-small-online.
+            model: Model to use for search. Default is sonar.
                   Available models:
-                  - sonar-small-online (fastest, cost-effective)
-                  - sonar-medium-online (balanced)
-                  - sonar-large-online (most capable)
+                  - sonar(fastest, cost-effective)
+                  - sonar-pro
+                  - sonar-reasoning
+                  - sonar-reasoning-pro
+                  - sonar-deep-research
             timeout: Request timeout in seconds (default 30)
         """
         self.api_key = api_key or os.environ.get("PERPLEXITY_API_KEY")
