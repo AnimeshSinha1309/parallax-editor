@@ -1,15 +1,9 @@
 """Perplexity API utilities for web search."""
 
 import os
-from pathlib import Path
 from typing import Dict, List, Optional, Any
 import requests
 from dataclasses import dataclass
-from dotenv import load_dotenv
-
-# Load environment variables from .env file in project root
-_project_root = Path(__file__).parent.parent
-load_dotenv(_project_root / ".env")
 
 
 @dataclass
@@ -31,9 +25,8 @@ class PerplexitySearch:
     to perform Google-like searches and get AI-summarized results.
 
     Requirements:
-        - PERPLEXITY_API_KEY in .env file or environment variable
+        - PERPLEXITY_API_KEY in .env file (loaded via parallax package)
         - requests library (already in dependencies)
-        - python-dotenv library (already in dependencies)
 
     Usage:
         # Basic search
@@ -44,12 +37,12 @@ class PerplexitySearch:
             print("Sources:", result.citations)
 
         # Custom model
-        searcher = PerplexitySearch(model="llama-3.1-sonar-large-128k-online")
+        searcher = PerplexitySearch(model="sonar-large-online")
         result = searcher.search("latest Python features")
     """
 
     BASE_URL = "https://api.perplexity.ai"
-    DEFAULT_MODEL = "llama-3.1-sonar-small-128k-online"
+    DEFAULT_MODEL = "sonar-small-online"
 
     def __init__(
         self,
@@ -62,11 +55,11 @@ class PerplexitySearch:
 
         Args:
             api_key: Perplexity API key. If None, reads from PERPLEXITY_API_KEY env var.
-            model: Model to use for search. Default is sonar-small-128k-online.
+            model: Model to use for search. Default is sonar-small-online.
                   Available models:
-                  - llama-3.1-sonar-small-128k-online (fastest, cost-effective)
-                  - llama-3.1-sonar-large-128k-online (more capable)
-                  - llama-3.1-sonar-huge-128k-online (most capable)
+                  - sonar-small-online (fastest, cost-effective)
+                  - sonar-medium-online (balanced)
+                  - sonar-large-online (most capable)
             timeout: Request timeout in seconds (default 30)
         """
         self.api_key = api_key or os.environ.get("PERPLEXITY_API_KEY")
