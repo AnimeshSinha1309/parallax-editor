@@ -1,10 +1,13 @@
 """Dummy fulfiller for placeholder content during development."""
 
 import random
+import logging
 from typing import List, Tuple, Any, Optional
 
-from .base import Fulfiller
-from .models import Card, CardType
+from fulfillers.base import Fulfiller
+from fulfillers.models import Card, CardType
+
+logger = logging.getLogger("parallax.dummy_fulfiller")
 
 
 class DummyFulfiller(Fulfiller):
@@ -20,25 +23,26 @@ class DummyFulfiller(Fulfiller):
 
     async def invoke(
         self,
-        text_buffer: str,
+        document_text: str,
         cursor_position: Tuple[int, int],
-        query_intent: str,
-        context: Optional[Any] = None,
+        scope_root: str,
+        intent_label: Optional[str] = None,
         **kwargs
     ) -> List[Card]:
         """
         Generate dummy cards of various types.
 
         Args:
-            text_buffer: Current file content (unused in dummy implementation)
+            document_text: Current file content (unused in dummy implementation)
             cursor_position: Cursor position (unused in dummy implementation)
-            query_intent: Intent or trigger reason (unused in dummy implementation)
-            context: Optional context (unused in dummy implementation)
+            scope_root: Root directory path (unused in dummy implementation)
+            intent_label: Optional intent label (unused in dummy implementation)
             **kwargs: Additional parameters
 
         Returns:
             List of 1-3 random placeholder cards
         """
+        logger.info(f"DummyFulfiller invoked at {cursor_position}, scope_root={scope_root}")
         all_cards = [
             # CONTEXT cards - contextual information
             Card(
@@ -115,7 +119,9 @@ class DummyFulfiller(Fulfiller):
 
         # Return 1-3 random cards
         num_cards = random.randint(1, 3)
-        return random.sample(all_cards, num_cards)
+        selected_cards = random.sample(all_cards, num_cards)
+        logger.debug(f"DummyFulfiller returning {num_cards} cards: {[c.type.value for c in selected_cards]}")
+        return selected_cards
 
     async def is_available(self) -> bool:
         """
@@ -124,4 +130,5 @@ class DummyFulfiller(Fulfiller):
         Returns:
             Always returns True since this is a dummy implementation
         """
+        logger.debug("DummyFulfiller is always available")
         return True

@@ -2,6 +2,7 @@
 Main application for Parallax text editor.
 """
 
+import logging
 from pathlib import Path
 from textual.app import App, ComposeResult
 from textual.containers import Container, Horizontal
@@ -12,8 +13,13 @@ from parallax.widgets.ai_feed import AIFeed
 from parallax.widgets.command_input import CommandInput
 from parallax.core.command_handler import CommandHandler
 from parallax.core.feed_handler import FeedHandler
-from fulfillers import DummyFulfiller, Card, CardType
+from parallax.core.logging_config import setup_logging, get_logger
+from fulfillers import Card, CardType
+from fulfillers.dummy import DummyFulfiller
+from fulfillers.completions import Completions
 from textual import events
+
+logger = get_logger("parallax.app")
 
 
 class ParallaxApp(App):
@@ -55,11 +61,16 @@ class ParallaxApp(App):
             root_path: The root directory for the file explorer
             **kwargs: Additional keyword arguments for App
         """
+        # Set up logging before anything else
+        setup_logging(log_level="INFO")
+        logger.info(f"Initializing Parallax application with root_path={root_path}")
+
         super().__init__(**kwargs)
         self.root_path = root_path
         self.command_handler = CommandHandler()
         self.yankboard = ""  # For yank/paste operations
-        self.feed_handler = FeedHandler(threshold=20)  # Trigger every 20 characters
+        self.feed_handler = FeedHandler(threshold=20, scope_root=root_path)  # Trigger every 20 characters
+        logger.debug("FeedHandler initialized")
 
     def compose(self) -> ComposeResult:
         """Compose the application layout."""
@@ -77,24 +88,37 @@ class ParallaxApp(App):
 
     def on_mount(self) -> None:
         """Handle mount event."""
+        logger.info("ParallaxApp mounted, setting up components")
         self.title = "Parallax"
         self.sub_title = "Terminal Text Editor"
 
         # Set up feed handler with AI feed and text editor
         ai_feed = self.query_one("#ai-feed", AIFeed)
         self.feed_handler.set_ai_feed(ai_feed)
+        logger.debug("AI feed connected to FeedHandler")
 
         text_editor = self.query_one("#text-editor", TextEditor)
         self.feed_handler.set_text_editor(text_editor)
+        logger.debug("TextEditor connected to FeedHandler")
 
         # Register fulfillers
-        # TODO: In production, register actual LLM-powered fulfillers
-        dummy_fulfiller = DummyFulfiller()
-        self.feed_handler.register_fulfiller(dummy_fulfiller)
+        logger.info("Registering fulfillers...")
+
+        # Register Completions fulfiller (LLM-powered)
+        try:
+            completions_fulfiller = Completions()
+            self.feed_handler.register_fulfiller(completions_fulfiller)
+            logger.info("Completions fulfiller registered successfully")
+        except Exception as e:
+            logger.warning(f"Failed to register Completions fulfiller: {e}")
+            logger.info("Falling back to DummyFulfiller")
+            dummy_fulfiller = DummyFulfiller()
+            self.feed_handler.register_fulfiller(dummy_fulfiller)
 
         # Start in command mode by default
         command_input = self.query_one("#command-input", CommandInput)
         command_input.focus_input()
+        logger.info("Parallax startup complete")
 
     def on_file_explorer_file_selected(self, message: FileExplorer.FileSelected) -> None:
         """
@@ -258,13 +282,16 @@ File Operations:
         """
         # Only track changes in the main text editor
         if event.text_area.id == "text-area":
+            logger.debug("Text area changed event received")
             # Clear ghost text when user types (any change)
             editor = self.query_one("#text-editor", TextEditor)
             if editor.ghost_text_visible:
+                logger.debug("Clearing ghost text due to text change")
                 editor.clear_ghost_text()
 
             # Get cursor position from text area
             cursor_pos = event.text_area.cursor_location
+            logger.debug(f"Notifying FeedHandler of text change at cursor {cursor_pos}")
             # Pass text and cursor position to feed handler
             self.feed_handler.on_text_change(event.text_area.text, cursor_pos)
 
@@ -285,7 +312,9 @@ File Operations:
         # Tab or Right arrow: Accept ghost text completion
         if event.key in ["tab", "right"]:
             if editor.ghost_text_visible:
+                logger.info(f"Key '{event.key}' pressed, attempting to accept ghost text")
                 if editor.accept_ghost_text():
+                    logger.info("Ghost text accepted via keyboard")
                     event.prevent_default()
                     event.stop()
                     return
@@ -293,5 +322,6 @@ File Operations:
         # Escape: Dismiss ghost text (already handled by action_exit_to_command, but also clear ghost text)
         elif event.key == "escape":
             if editor.ghost_text_visible:
+                logger.info("Escape pressed, clearing ghost text")
                 editor.clear_ghost_text()
                 # Don't prevent default - let it exit to command mode

@@ -4,10 +4,13 @@ Feed handler for dynamic updates based on editor activity.
 
 import asyncio
 import random
+import logging
 from typing import Optional, List, Tuple
 from textual.widgets import TextArea
 from parallax.core.suggestion_tracker import SuggestionTracker
 from fulfillers import Fulfiller, Card, CardType
+
+logger = logging.getLogger("parallax.feed_handler")
 
 
 class FeedHandler:
@@ -18,19 +21,22 @@ class FeedHandler:
     Uses registered fulfillers to generate cards asynchronously.
     """
 
-    def __init__(self, threshold: int = 20):
+    def __init__(self, threshold: int = 20, scope_root: str = "."):
         """
         Initialize the feed handler.
 
         Args:
             threshold: Number of characters to type before triggering an update
+            scope_root: Root directory path for the scope
         """
+        logger.info(f"Initializing FeedHandler with threshold={threshold}, scope_root={scope_root}")
         self.threshold = threshold
         self.char_count = 0
         self.last_content = ""
         self.cursor_position: Tuple[int, int] = (0, 0)
+        self.scope_root = scope_root
         self.ai_feed = None
-        self.text_editor = None  # TODO: Set via set_text_editor() for ghost text
+        self.text_editor = None
         self.feed_items: List[Card] = []
         self.suggestion_tracker = SuggestionTracker()
         self.fulfillers: List[Fulfiller] = []
@@ -43,7 +49,10 @@ class FeedHandler:
         Args:
             fulfiller: A Fulfiller instance to register
         """
+        fulfiller_name = fulfiller.__class__.__name__
+        logger.info(f"Registering fulfiller: {fulfiller_name}")
         self.fulfillers.append(fulfiller)
+        logger.debug(f"Total registered fulfillers: {len(self.fulfillers)}")
 
     def set_ai_feed(self, ai_feed) -> None:
         """
@@ -107,77 +116,92 @@ class FeedHandler:
         self.char_count += char_diff
         self.last_content = new_content
 
+        logger.debug(f"Text changed: char_count={self.char_count}/{self.threshold}, cursor={self.cursor_position}")
+
         # Check if we've reached the threshold
         if self.char_count >= self.threshold:
+            logger.info(f"Threshold reached ({self.char_count} >= {self.threshold}), triggering update")
             # Trigger async update (schedule as task)
             asyncio.create_task(self._trigger_update_async(new_content))
             self.char_count = 0  # Reset counter
 
-    async def _trigger_update_async(self, text_buffer: str) -> None:
+    async def _trigger_update_async(self, document_text: str) -> None:
         """
         Trigger an async update to the AI feed and ghost text.
 
         Invokes all registered fulfillers concurrently and processes their results.
 
         Args:
-            text_buffer: The current text buffer content
+            document_text: The current document text content
         """
         if self._update_in_progress:
-            print("[FeedHandler] Update already in progress, skipping...")
+            logger.warning("Update already in progress, skipping...")
             return
 
         if not self.fulfillers:
-            print("[FeedHandler] No fulfillers registered, skipping update")
+            logger.warning("No fulfillers registered, skipping update")
             return
 
+        logger.info(f"Starting async update with {len(self.fulfillers)} fulfiller(s)")
         self._update_in_progress = True
 
         try:
             # Invoke all fulfillers concurrently
+            logger.debug(f"Invoking fulfillers with cursor_position={self.cursor_position}, scope_root={self.scope_root}")
             tasks = [
                 fulfiller.invoke(
-                    text_buffer=text_buffer,
+                    document_text=document_text,
                     cursor_position=self.cursor_position,
-                    query_intent="editor_update"
+                    scope_root=self.scope_root,
+                    intent_label="editor_update"
                 )
                 for fulfiller in self.fulfillers
             ]
 
+            logger.info("Gathering results from all fulfillers...")
             results = await asyncio.gather(*tasks, return_exceptions=True)
+            logger.info(f"Received {len(results)} results from fulfillers")
 
             # Flatten all cards from all fulfillers
             all_cards: List[Card] = []
-            for result in results:
+            for i, result in enumerate(results):
                 if isinstance(result, Exception):
-                    print(f"[FeedHandler] Fulfiller error: {result}")
+                    logger.error(f"Fulfiller {i} error: {result}", exc_info=result)
                     continue
                 if isinstance(result, list):
+                    logger.debug(f"Fulfiller {i} returned {len(result)} card(s)")
                     all_cards.extend(result)
+
+            logger.info(f"Total cards received: {len(all_cards)}")
 
             # Separate cards by type
             completion_cards = [c for c in all_cards if c.type == CardType.COMPLETION]
             feed_cards = [c for c in all_cards if c.type in (CardType.QUESTION, CardType.CONTEXT)]
 
+            logger.info(f"Separated cards: {len(completion_cards)} COMPLETION, {len(feed_cards)} QUESTION/CONTEXT")
+
             # Handle ghost text completions
             if completion_cards:
-                print(f"[FeedHandler] Received {len(completion_cards)} completion cards for ghost text")
-                # TODO: Implement ghost text rendering in the editor
-                # For now, just call set_ghost_text if editor is available
+                logger.info(f"Processing {len(completion_cards)} completion card(s) for ghost text")
                 if self.text_editor:
                     # Use the first completion card
                     completion_text = completion_cards[0].text
+                    logger.info(f"Setting ghost text: {completion_text[:50]}...")
                     self.text_editor.set_ghost_text(completion_text)
-                    print(f"[FeedHandler] Set ghost text: {completion_text[:50]}...")
+                    logger.debug("Ghost text set successfully")
                 else:
-                    print(f"[FeedHandler] TODO: TextEditor not set, cannot render ghost text")
+                    logger.error("TextEditor not set, cannot render ghost text")
+            else:
+                logger.debug("No completion cards received")
 
             # Handle feed cards - update the sidebar
             if feed_cards:
+                logger.info(f"Processing {len(feed_cards)} feed card(s) for sidebar")
                 # Delete an arbitrary old item (if there are items to delete)
                 if len(self.feed_items) > 0:
                     delete_index = random.randint(0, len(self.feed_items) - 1)
                     deleted_item = self.feed_items.pop(delete_index)
-                    print(f"[FeedHandler] Deleted item at index {delete_index}: {deleted_item.header}")
+                    logger.debug(f"Deleted feed item at index {delete_index}: {deleted_item.header}")
 
                 # Add new cards at random positions
                 for card in feed_cards:
@@ -187,16 +211,22 @@ class FeedHandler:
                         insert_index = 0
 
                     self.feed_items.insert(insert_index, card)
-                    print(f"[FeedHandler] Added new item at index {insert_index}: {card.header}")
+                    logger.debug(f"Added feed item at index {insert_index}: {card.header}")
 
                 # Update the AI feed widget
                 if self.ai_feed:
+                    logger.debug("Updating AI feed widget")
                     self.ai_feed.update_content(self.feed_items)
+                else:
+                    logger.warning("AI feed not set, cannot update sidebar")
+            else:
+                logger.debug("No feed cards to process")
 
         except Exception as e:
-            print(f"[FeedHandler] Error during update: {e}")
+            logger.error(f"Error during update: {e}", exc_info=True)
         finally:
             self._update_in_progress = False
+            logger.info("Update cycle completed")
 
     def push_card(self, card: Card, position: Optional[int] = None) -> None:
         """

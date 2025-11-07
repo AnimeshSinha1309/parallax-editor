@@ -4,10 +4,13 @@ Text editor widget for Parallax.
 
 from pathlib import Path
 from typing import Optional
+import logging
 from textual.widgets import TextArea
 from textual.containers import Container
 from parallax.core.syntax_highlighter import SyntaxHighlighter
 from parallax.widgets.ghost_text_area import GhostTextArea
+
+logger = logging.getLogger("parallax.text_editor")
 
 
 class TextEditor(Container):
@@ -339,6 +342,7 @@ class TextEditor(Container):
         Args:
             completion: The completion text to show as ghost text
         """
+        logger.info(f"set_ghost_text called with completion: {completion[:50]}...")
         self.ghost_text = completion
         self.ghost_text_visible = True
 
@@ -346,12 +350,13 @@ class TextEditor(Container):
         try:
             text_area = self.query_one("#text-area", GhostTextArea)
             text_area.set_ghost_text(completion)
-            print(f"[TextEditor] Ghost text set: {completion[:50]}...")
+            logger.debug("Ghost text delegated to GhostTextArea successfully")
         except Exception as e:
-            print(f"[TextEditor] Error setting ghost text: {e}")
+            logger.error(f"Error setting ghost text: {e}", exc_info=True)
 
     def clear_ghost_text(self) -> None:
         """Clear the current ghost text completion."""
+        logger.debug("clear_ghost_text called")
         self.ghost_text = None
         self.ghost_text_visible = False
 
@@ -359,8 +364,9 @@ class TextEditor(Container):
         try:
             text_area = self.query_one("#text-area", GhostTextArea)
             text_area.clear_ghost_text()
+            logger.debug("Ghost text cleared successfully")
         except Exception as e:
-            print(f"[TextEditor] Error clearing ghost text: {e}")
+            logger.error(f"Error clearing ghost text: {e}", exc_info=True)
 
     def accept_ghost_text(self) -> bool:
         """
@@ -370,8 +376,10 @@ class TextEditor(Container):
             bool: True if ghost text was accepted, False if no ghost text
         """
         if not self.ghost_text or not self.ghost_text_visible:
+            logger.debug("accept_ghost_text called but no ghost text visible")
             return False
 
+        logger.info(f"Accepting ghost text: {self.ghost_text[:50]}...")
         try:
             text_area = self.query_one("#text-area", GhostTextArea)
             result = text_area.accept_ghost_text()
@@ -379,9 +387,9 @@ class TextEditor(Container):
             if result:
                 self.ghost_text = None
                 self.ghost_text_visible = False
-                print(f"[TextEditor] Ghost text accepted")
+                logger.info("Ghost text accepted and inserted successfully")
 
             return result
         except Exception as e:
-            print(f"[TextEditor] Error accepting ghost text: {e}")
+            logger.error(f"Error accepting ghost text: {e}", exc_info=True)
             return False
