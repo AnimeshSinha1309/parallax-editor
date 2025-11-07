@@ -3,7 +3,7 @@
 from typing import Optional, List, Tuple, Any
 
 from ..base import Fulfiller
-from ..models import Card
+from ..models import Card, CardType
 from .ripgrep import RipgrepSearch
 from .models import SearchResult, SearchMatch
 from .context import RipgrepContext
@@ -102,6 +102,7 @@ class CodeSearch(Fulfiller):
             return [Card(
                 header="Search Error",
                 text=result.error or "Unknown error occurred",
+                type=CardType.CONTEXT,
                 metadata={"query": result.query, "success": False}
             )]
 
@@ -109,6 +110,7 @@ class CodeSearch(Fulfiller):
             return [Card(
                 header="No Results",
                 text=f"No matches found for: {result.query}",
+                type=CardType.CONTEXT,
                 metadata={"query": result.query, "total_matches": 0}
             )]
 
@@ -125,6 +127,7 @@ class CodeSearch(Fulfiller):
             card = Card(
                 header=f"{match.file_path}:{match.line_number}",
                 text="\n".join(text_lines),
+                type=CardType.CONTEXT,
                 metadata={
                     "file_path": match.file_path,
                     "line_number": match.line_number,

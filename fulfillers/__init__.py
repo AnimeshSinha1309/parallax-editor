@@ -1,6 +1,7 @@
 """Fulfillers package - generic fulfiller framework."""
 
 from .base import Fulfiller
-from .models import Card
+from .models import Card, CardType
+from .dummy import DummyFulfiller
 
-__all__ = ["Fulfiller", "Card"]
+__all__ = ["Fulfiller", "Card", "CardType", "DummyFulfiller"]

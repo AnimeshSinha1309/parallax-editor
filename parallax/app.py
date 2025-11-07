@@ -12,6 +12,7 @@ from parallax.widgets.ai_feed import AIFeed
 from parallax.widgets.command_input import CommandInput
 from parallax.core.command_handler import CommandHandler
 from parallax.core.feed_handler import FeedHandler
+from fulfillers import DummyFulfiller, Card, CardType
 
 
 class ParallaxApp(App):
@@ -78,9 +79,17 @@ class ParallaxApp(App):
         self.title = "Parallax"
         self.sub_title = "Terminal Text Editor"
 
-        # Set up feed handler with AI feed
+        # Set up feed handler with AI feed and text editor
         ai_feed = self.query_one("#ai-feed", AIFeed)
         self.feed_handler.set_ai_feed(ai_feed)
+
+        text_editor = self.query_one("#text-editor", TextEditor)
+        self.feed_handler.set_text_editor(text_editor)
+
+        # Register fulfillers
+        # TODO: In production, register actual LLM-powered fulfillers
+        dummy_fulfiller = DummyFulfiller()
+        self.feed_handler.register_fulfiller(dummy_fulfiller)
 
         # Start in command mode by default
         command_input = self.query_one("#command-input", CommandInput)
@@ -169,8 +178,8 @@ File Operations:
                 if success:
                     # Mark this suggestion as deleted
                     self.feed_handler.mark_suggestion_deleted(header, content)
-                    # Sync feed_handler's feed_items with the AI feed config
-                    self.feed_handler.feed_items = list(feed.config)
+                    # Sync feed_handler's feed_items with the AI feed
+                    # Note: feed_items are already Card objects in FeedHandler
                     self.notify(f"Deleted suggestion: {header}", severity="information")
                 else:
                     self.notify("Failed to delete suggestion", severity="error")
@@ -248,4 +257,7 @@ File Operations:
         """
         # Only track changes in the main text editor
         if event.text_area.id == "text-area":
-            self.feed_handler.on_text_change(event.text_area.text)
+            # Get cursor position from text area
+            cursor_pos = event.text_area.cursor_location
+            # Pass text and cursor position to feed handler
+            self.feed_handler.on_text_change(event.text_area.text, cursor_pos)
