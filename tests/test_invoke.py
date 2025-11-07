@@ -23,10 +23,10 @@ async def test_invoke_basic():
 
         # Test invoke method
         cards = await search.invoke(
-            text_buffer="# This is a sample file\ndef main():\n    pass",
-            cursor_position=(2, 4),
-            query_intent="class",
-            context="../fulfillers",
+            document_text="# This is a sample file\ndef main():\n    pass",
+            parser_position=(2, 4),
+            scope_root="../fulfillers",
+            intent_label="class",
         )
 
         assert isinstance(cards, list), "invoke should return a list"
@@ -55,10 +55,10 @@ async def test_invoke_with_kwargs():
         search = CodeSearch(max_results=5)
 
         cards = await search.invoke(
-            text_buffer="",
-            cursor_position=(0, 0),
-            query_intent="def",
-            context="../fulfillers",
+            document_text="",
+            parser_position=(0, 0),
+            scope_root="../fulfillers",
+            intent_label="def",
             max_results=3,  # Override default
         )
 
@@ -78,10 +78,10 @@ async def test_invoke_error_handling():
 
         # Invalid regex should return error card
         cards = await search.invoke(
-            text_buffer="",
-            cursor_position=(0, 0),
-            query_intent="[invalid(",
-            context="../fulfillers",
+            document_text="",
+            parser_position=(0, 0),
+            scope_root="../fulfillers",
+            intent_label="[invalid(",
         )
 
         assert len(cards) == 1, "Error should return single card"
@@ -100,10 +100,10 @@ async def test_invoke_no_results():
         search = CodeSearch()
 
         cards = await search.invoke(
-            text_buffer="",
-            cursor_position=(0, 0),
-            query_intent="xyzabc123impossible",
-            context="../fulfillers",
+            document_text="",
+            parser_position=(0, 0),
+            scope_root="../fulfillers",
+            intent_label="xyzabc123impossible",
         )
 
         assert len(cards) == 1, "No results should return single card"

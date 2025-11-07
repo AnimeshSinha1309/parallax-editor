@@ -1,0 +1,126 @@
+from utils import get_lm
+from signatures.completion import InlineCompletion
+from fulfillers.base import Fulfiller
+from fulfillers.models import Card
+from typing import List, Tuple, Optional
+import dspy
+
+
+class Completions(Fulfiller, dspy.Module):
+
+    def __init__(self, **kwargs):
+        """Initialize the Completions fulfiller with DSPy module setup."""
+        super().__init__(**kwargs)
+        lm = get_lm()
+        if lm is not None:
+            dspy.configure(lm=lm)
+        self.predictor = dspy.Predict(InlineCompletion)
+
+    def forward(
+        self,
+        document_text: str,
+        parser_position: Tuple[int, int],
+        scope_root: str,
+        intent_label: Optional[str] = None,
+        **kwargs
+    ) -> List[Card]:
+        """
+        Forward pass for completions DSPy module.
+
+        Args:
+            document_text: The entire text content of the current document
+            parser_position: (line, column) position of the parser/cursor
+            scope_root: Root directory path for the scope (currently unused)
+            intent_label: Optional LLM-generated intent or label describing the query
+            **kwargs: Additional parameters
+
+        Returns:
+            List of Card objects with completion results
+        """
+        # Extract cursor context around parser position
+        line, col = parser_position
+        lines = document_text.split('\n')
+        
+        # Build cursor context window (≤150 characters)
+        cursor_context = self._build_cursor_context(lines, line, col)
+        
+        # Generate completion using DSPy Predict module
+        result = self.predictor(
+            full_document=document_text,
+            cursor_context=cursor_context
+        )
+        
+        # Convert to Card format
+        cards = []
+        if result.completion:
+            card = Card(
+                header="Completion",
+                text=result.completion,
+                metadata={
+                    "confidence": result.confidence,
+                    "intent_label": intent_label,
+                    "parser_position": parser_position,
+                }
+            )
+            cards.append(card)
+        
+        return cards
+
+    async def invoke(
+        self,
+        document_text: str,
+        parser_position: Tuple[int, int],
+        scope_root: str,
+        intent_label: Optional[str] = None,
+        **kwargs
+    ) -> List[Card]:
+        """
+        Invoke completions fulfiller (delegates to forward).
+
+        Args:
+            document_text: The entire text content of the current document
+            parser_position: (line, column) position of the parser/cursor
+            scope_root: Root directory path for the scope (currently unused)
+            intent_label: Optional LLM-generated intent or label describing the query
+            **kwargs: Additional parameters
+
+        Returns:
+            List of Card objects with completion results
+        """
+        return self.forward(
+            document_text=document_text,
+            parser_position=parser_position,
+            scope_root=scope_root,
+            intent_label=intent_label,
+            **kwargs
+        )
+    
+    def _build_cursor_context(self, lines: List[str], line: int, col: int) -> str:
+        """Build cursor context window with <cursor> marker."""
+        if line < 0 or line >= len(lines):
+            return "<cursor>"
+        
+        current_line = lines[line]
+        # Insert <cursor> marker at column position
+        before_cursor = current_line[:col]
+        after_cursor = current_line[col:]
+        context_line = before_cursor + "<cursor>" + after_cursor
+        
+        # Try to include surrounding lines if within 150 char limit
+        context = context_line
+        if line > 0:
+            prev_line = lines[line - 1]
+            if len(prev_line + "\n" + context) <= 150:
+                context = prev_line + "\n" + context
+        
+        if line < len(lines) - 1:
+            next_line = lines[line + 1]
+            if len(context + "\n" + next_line) <= 150:
+                context = context + "\n" + next_line
+        
+        return context[:150]
+    
+    async def is_available(self) -> bool:
+        """Check if completions fulfiller is available."""
+        from utils import get_lm
+        return get_lm() is not None

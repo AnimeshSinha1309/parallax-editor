@@ -1,15 +1,17 @@
 """Abstract base class for all fulfillers."""
 
 from abc import ABC, abstractmethod
-from typing import List, Any, Optional, Tuple
+from typing import List, Optional, Tuple
+
+from .models import Card
 
 
 class Fulfiller(ABC):
     """
     Abstract base class for all fulfiller implementations.
 
-    A fulfiller takes user context (text buffer, cursor position, query intent)
-    and returns a list of cards with relevant information.
+    A fulfiller takes user context (document text, parser position, scope root)
+    and optionally an intent label, then returns a list of cards with relevant information.
 
     Examples of fulfillers:
     - CodeSearch: Returns cards with code search results
@@ -20,20 +22,20 @@ class Fulfiller(ABC):
     @abstractmethod
     async def invoke(
         self,
-        text_buffer: str,
-        cursor_position: Tuple[int, int],
-        query_intent: str,
-        context: Optional[Any] = None,
+        document_text: str,
+        parser_position: Tuple[int, int],
+        scope_root: str,
+        intent_label: Optional[str] = None,
         **kwargs
-    ) -> List["Card"]:
+    ) -> List[Card]:
         """
         Invoke the fulfiller with the given inputs.
 
         Args:
-            text_buffer: All text in the current file as a string
-            cursor_position: (line, column) position of the cursor
-            query_intent: LLM-generated intent or note behind the query
-            context: Optional context object (fulfiller-specific)
+            document_text: The entire text content of the current document as a string
+            parser_position: (line, column) position of the parser/cursor
+            scope_root: Root directory path for the scope
+            intent_label: Optional LLM-generated intent or label describing the query
             **kwargs: Additional fulfiller-specific parameters
 
         Returns:
