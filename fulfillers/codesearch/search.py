@@ -4,9 +4,8 @@ from typing import Optional, List, Tuple, Any
 
 from ..base import Fulfiller
 from ..models import Card
-from utils.codesearch.ripgrep import RipgrepSearch
-from utils.codesearch.models import SearchResult, SearchMatch
-from utils.codesearch.context import RipgrepContext
+from utils.ripgrep import RipgrepSearch, SearchResult, SearchMatch
+from utils.context import PreferenceContext
 
 
 class CodeSearch(Fulfiller):
@@ -26,7 +25,7 @@ class CodeSearch(Fulfiller):
         result = await search.search("def.*retry")
 
         # Search with custom context
-        context = RipgrepContext()
+        context = PreferenceContext()
         context.add_path("/path/to/code")
         search = CodeSearch(context=context)
         result = await search.search("def.*retry")
@@ -37,7 +36,7 @@ class CodeSearch(Fulfiller):
 
     def __init__(
         self,
-        context: Optional[RipgrepContext] = None,
+        context: Optional[PreferenceContext] = None,
         max_results: int = 50,
         context_lines: int = 2,
         case_sensitive: bool = False,
@@ -46,7 +45,7 @@ class CodeSearch(Fulfiller):
         Initialize CodeSearch with an optional context and default search parameters.
 
         Args:
-            context: RipgrepContext defining which directories/files to search.
+            context: PreferenceContext defining which directories/files to search.
                     If None, context will be auto-created when needed.
             max_results: Default maximum matches to return (default 50)
             context_lines: Default lines of context before/after match (default 2)

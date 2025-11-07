@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "fulfillers"))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from codesearch import CodeSearch, SearchMatch, SearchResult
-from utils.codesearch.ripgrep import RipgrepSearch
+from utils.ripgrep import RipgrepSearch
 
 FIXTURES_DIR = os.path.join(os.path.dirname(__file__), "fixtures")
 

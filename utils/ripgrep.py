@@ -1,15 +1,44 @@
-"""Ripgrep-based code search implementation."""
+"""Ripgrep-based code search implementation with data models."""
 
 import asyncio
 import json
+from dataclasses import dataclass, field
 from typing import List, Optional
 
-from .base import CodeSearchBackend
-from .models import SearchMatch, SearchResult
-from .context import RipgrepContext
+from .context import PreferenceContext
 
 
-class RipgrepSearch(CodeSearchBackend):
+@dataclass
+class SearchMatch:
+    """A single match from code search."""
+
+    file_path: str  # Path to file (relative to search dir)
+    line_number: int  # Line number (1-indexed)
+    line_content: str  # The matching line content
+    context_before: List[str] = field(default_factory=list)  # Lines before match
+    context_after: List[str] = field(default_factory=list)  # Lines after match
+
+    def __str__(self) -> str:
+        """Format as file:line for display."""
+        return f"{self.file_path}:{self.line_number}"
+
+
+@dataclass
+class SearchResult:
+    """Complete search result."""
+
+    matches: List[SearchMatch]
+    total_matches: int
+    query: str
+    error: Optional[str] = None
+
+    @property
+    def success(self) -> bool:
+        """True if search completed without errors."""
+        return self.error is None
+
+
+class RipgrepSearch:
     """
     Code search implementation using ripgrep.
 
@@ -21,12 +50,12 @@ class RipgrepSearch(CodeSearchBackend):
         - Must be in PATH
     """
 
-    def __init__(self, context: Optional[RipgrepContext] = None):
+    def __init__(self, context: Optional[PreferenceContext] = None):
         """
         Initialize RipgrepSearch with an optional context.
 
         Args:
-            context: RipgrepContext defining which directories/files to search.
+            context: PreferenceContext defining which directories/files to search.
                     If None, a new context will be created when needed.
         """
         self.context = context
@@ -60,7 +89,7 @@ class RipgrepSearch(CodeSearchBackend):
             else:
                 # Use context paths
                 if self.context is None:
-                    self.context = RipgrepContext()
+                    self.context = PreferenceContext()
                 try:
                     search_paths = [str(p) for p in self.context.get_paths()]
                 except Exception as e:

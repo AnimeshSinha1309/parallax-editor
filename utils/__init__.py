@@ -1,6 +1,7 @@
 """Utils package for Parallax editor."""
 
-from . import codesearch
+from . import context
+from . import ripgrep
 from . import perplexity
 
-__all__ = ["codesearch", "perplexity"]
+__all__ = ["context", "ripgrep", "perplexity"]

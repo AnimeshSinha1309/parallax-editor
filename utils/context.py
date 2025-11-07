@@ -1,5 +1,5 @@
 """
-RipgrepContext class for managing search directories and files.
+PreferenceContext class for managing search directories and user preferences.
 """
 
 import os
@@ -8,14 +8,14 @@ from pathlib import Path
 from typing import Set, Optional, Union
 
 
-class RipgrepContextError(Exception):
-    """Exception raised when RipgrepContext encounters an error."""
+class PreferenceContextError(Exception):
+    """Exception raised when PreferenceContext encounters an error."""
     pass
 
 
-class RipgrepContext:
+class PreferenceContext:
     """
-    Manages the set of directories and files to search within using ripgrep.
+    Manages the set of directories and files to search within, along with user preferences.
 
     The context can be populated by:
     1. Adding paths directly
@@ -24,20 +24,20 @@ class RipgrepContext:
 
     Examples:
         # Auto-discover current git repo
-        context = RipgrepContext()
+        context = PreferenceContext()
 
         # Add specific directory
-        context = RipgrepContext()
+        context = PreferenceContext()
         context.add_path("/path/to/search")
 
         # Add path and its git repo
-        context = RipgrepContext()
+        context = PreferenceContext()
         context.add_git_repo("/path/to/file/in/repo")
     """
 
     def __init__(self, auto_add_current_repo: bool = True):
         """
-        Initialize a new RipgrepContext.
+        Initialize a new PreferenceContext.
 
         Args:
             auto_add_current_repo: If True and no paths are added, automatically
@@ -56,12 +56,12 @@ class RipgrepContext:
             path: Path to a file or directory to include in searches.
 
         Raises:
-            RipgrepContextError: If the path does not exist.
+            PreferenceContextError: If the path does not exist.
         """
         path_obj = Path(path).resolve()
 
         if not path_obj.exists():
-            raise RipgrepContextError(f"Path does not exist: {path}")
+            raise PreferenceContextError(f"Path does not exist: {path}")
 
         self._paths.add(path_obj)
         self._initialized = True
@@ -77,19 +77,19 @@ class RipgrepContext:
                  If None, uses the current working directory.
 
         Raises:
-            RipgrepContextError: If no git repository is found.
+            PreferenceContextError: If no git repository is found.
         """
         if path is None:
             search_path = Path.cwd()
         else:
             search_path = Path(path).resolve()
             if not search_path.exists():
-                raise RipgrepContextError(f"Path does not exist: {path}")
+                raise PreferenceContextError(f"Path does not exist: {path}")
 
         # Find the git repository root
         repo_root = self._find_git_root(search_path)
         if repo_root is None:
-            raise RipgrepContextError(
+            raise PreferenceContextError(
                 f"No git repository found for path: {search_path}"
             )
 
@@ -146,14 +146,14 @@ class RipgrepContext:
             Set of Path objects representing directories and files to search.
 
         Raises:
-            RipgrepContextError: If no paths are available and git repo discovery fails.
+            PreferenceContextError: If no paths are available and git repo discovery fails.
         """
         # Auto-add current repo if no paths were explicitly added
         if not self._initialized and self._auto_add_current_repo:
             self.add_git_repo()
 
         if not self._paths:
-            raise RipgrepContextError(
+            raise PreferenceContextError(
                 "No paths in context. Add paths using add_path() or add_git_repo()."
             )
 
@@ -170,11 +170,11 @@ class RipgrepContext:
 
     def __repr__(self) -> str:
         """Return a string representation of the context."""
-        return f"RipgrepContext(paths={len(self._paths)})"
+        return f"PreferenceContext(paths={len(self._paths)})"
 
     def __str__(self) -> str:
         """Return a human-readable string representation."""
         if not self._paths:
-            return "RipgrepContext(empty)"
-        return f"RipgrepContext with {len(self._paths)} path(s):\n" + \
+            return "PreferenceContext(empty)"
+        return f"PreferenceContext with {len(self._paths)} path(s):\n" + \
                "\n".join(f"  - {p}" for p in sorted(self._paths))
