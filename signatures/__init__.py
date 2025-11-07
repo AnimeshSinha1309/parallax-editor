@@ -6,8 +6,8 @@ underlying language model. Refer to the project documentation for
 context on expected agent behaviors.
 """
 
-from .completion import GenerateInlineCompletion
+from .completions_singnature import InlineCompletion
 from .query_generator import RGQueryGenerator
 
-__all__ = ["GenerateInlineCompletion", "RGQueryGenerator"]
+__all__ = ["InlineCompletion", "RGQueryGenerator"]
 

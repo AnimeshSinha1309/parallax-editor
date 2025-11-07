@@ -23,7 +23,7 @@ class Fulfiller(ABC):
     async def invoke(
         self,
         document_text: str,
-        parser_position: Tuple[int, int],
+        cursor_position: Tuple[int, int],
         scope_root: str,
         intent_label: Optional[str] = None,
         **kwargs
@@ -33,7 +33,7 @@ class Fulfiller(ABC):
 
         Args:
             document_text: The entire text content of the current document as a string
-            parser_position: (line, column) position of the parser/cursor
+            cursor_position: (line, column) position of the cursor
             scope_root: Root directory path for the scope
             intent_label: Optional LLM-generated intent or label describing the query
             **kwargs: Additional fulfiller-specific parameters

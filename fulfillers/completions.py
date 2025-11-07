@@ -1,5 +1,5 @@
 from utils import get_lm
-from signatures.completion import InlineCompletion
+from signatures.completions_singnature import InlineCompletion
 from fulfillers.base import Fulfiller
 from fulfillers.models import Card
 from typing import List, Tuple, Optional
@@ -19,7 +19,7 @@ class Completions(Fulfiller, dspy.Module):
     def forward(
         self,
         document_text: str,
-        parser_position: Tuple[int, int],
+        cursor_position: Tuple[int, int],
         scope_root: str,
         intent_label: Optional[str] = None,
         **kwargs
@@ -29,7 +29,7 @@ class Completions(Fulfiller, dspy.Module):
 
         Args:
             document_text: The entire text content of the current document
-            parser_position: (line, column) position of the parser/cursor
+            cursor_position: (line, column) position of the parser/cursor
             scope_root: Root directory path for the scope (currently unused)
             intent_label: Optional LLM-generated intent or label describing the query
             **kwargs: Additional parameters
@@ -38,7 +38,7 @@ class Completions(Fulfiller, dspy.Module):
             List of Card objects with completion results
         """
         # Extract cursor context around parser position
-        line, col = parser_position
+        line, col = cursor_position
         lines = document_text.split('\n')
         
         # Build cursor context window (≤150 characters)
@@ -59,7 +59,7 @@ class Completions(Fulfiller, dspy.Module):
                 metadata={
                     "confidence": result.confidence,
                     "intent_label": intent_label,
-                    "parser_position": parser_position,
+                    "cursor_position": cursor_position,
                 }
             )
             cards.append(card)
@@ -69,7 +69,7 @@ class Completions(Fulfiller, dspy.Module):
     async def invoke(
         self,
         document_text: str,
-        parser_position: Tuple[int, int],
+        cursor_position: Tuple[int, int],
         scope_root: str,
         intent_label: Optional[str] = None,
         **kwargs
@@ -79,7 +79,7 @@ class Completions(Fulfiller, dspy.Module):
 
         Args:
             document_text: The entire text content of the current document
-            parser_position: (line, column) position of the parser/cursor
+            cursor_position: (line, column) position of the parser/cursor
             scope_root: Root directory path for the scope (currently unused)
             intent_label: Optional LLM-generated intent or label describing the query
             **kwargs: Additional parameters
@@ -89,7 +89,7 @@ class Completions(Fulfiller, dspy.Module):
         """
         return self.forward(
             document_text=document_text,
-            parser_position=parser_position,
+            cursor_position=cursor_position,
             scope_root=scope_root,
             intent_label=intent_label,
             **kwargs

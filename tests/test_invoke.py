@@ -24,7 +24,7 @@ async def test_invoke_basic():
         # Test invoke method
         cards = await search.invoke(
             document_text="# This is a sample file\ndef main():\n    pass",
-            parser_position=(2, 4),
+            cursor_position=(2, 4),
             scope_root="../fulfillers",
             intent_label="class",
         )
@@ -56,7 +56,7 @@ async def test_invoke_with_kwargs():
 
         cards = await search.invoke(
             document_text="",
-            parser_position=(0, 0),
+            cursor_position=(0, 0),
             scope_root="../fulfillers",
             intent_label="def",
             max_results=3,  # Override default
@@ -79,7 +79,7 @@ async def test_invoke_error_handling():
         # Invalid regex should return error card
         cards = await search.invoke(
             document_text="",
-            parser_position=(0, 0),
+            cursor_position=(0, 0),
             scope_root="../fulfillers",
             intent_label="[invalid(",
         )
@@ -101,7 +101,7 @@ async def test_invoke_no_results():
 
         cards = await search.invoke(
             document_text="",
-            parser_position=(0, 0),
+            cursor_position=(0, 0),
             scope_root="../fulfillers",
             intent_label="xyzabc123impossible",
         )
