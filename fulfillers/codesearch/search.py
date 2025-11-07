@@ -4,9 +4,9 @@ from typing import Optional, List, Tuple, Any
 
 from ..base import Fulfiller
 from ..models import Card
-from .ripgrep import RipgrepSearch
-from .models import SearchResult, SearchMatch
-from .context import RipgrepContext
+from utils.codesearch.ripgrep import RipgrepSearch
+from utils.codesearch.models import SearchResult, SearchMatch
+from utils.codesearch.context import RipgrepContext
 
 
 class CodeSearch(Fulfiller):

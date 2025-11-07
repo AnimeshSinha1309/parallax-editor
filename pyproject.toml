@@ -20,7 +20,7 @@ requires = ["setuptools>=68.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["parallax", "parallax.widgets", "parallax.core", "parallax.config", "fulfillers", "fulfillers.codesearch", "utils"]
+packages = ["parallax", "parallax.widgets", "parallax.core", "parallax.config", "fulfillers", "fulfillers.codesearch", "utils", "utils.codesearch"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

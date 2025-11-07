@@ -1,6 +1,12 @@
 """Test script for RipgrepContext functionality."""
 
 import asyncio
+import sys
+import os
+
+# Add parent directory to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
 from fulfillers.codesearch import CodeSearch, RipgrepContext, RipgrepContextError
 
 
@@ -50,7 +56,7 @@ async def test_multiple_paths():
     print("\nTest 4: Multiple paths in context")
     try:
         context = RipgrepContext(auto_add_current_repo=False)
-        context.add_path("./fulfillers/codesearch")
+        context.add_path("./utils/codesearch")
         context.add_path("./docs")
         print(f"  Context has {len(context)} paths")
         search = CodeSearch(context=context)
