@@ -1,7 +1,13 @@
-"""Test script for RipgrepContext functionality."""
+"""Test script for PreferenceContext functionality."""
 
 import asyncio
-from fulfillers.codesearch import CodeSearch, RipgrepContext, RipgrepContextError
+import sys
+import os
+
+# Add parent directory to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
+from fulfillers.codesearch import CodeSearch, PreferenceContext, PreferenceContextError
 
 
 async def test_auto_git_repo():
@@ -9,7 +15,7 @@ async def test_auto_git_repo():
     print("Test 1: Auto-discover git repo")
     try:
         search = CodeSearch()
-        result = await search.search("class RipgrepContext")
+        result = await search.search("class PreferenceContext")
         print(f"✓ Found {result.total_matches} matches")
         if result.matches:
             print(f"  First match: {result.matches[0].file_path}:{result.matches[0].line_number}")
@@ -21,7 +27,7 @@ async def test_explicit_context():
     """Test explicit context with added path."""
     print("\nTest 2: Explicit context with added path")
     try:
-        context = RipgrepContext(auto_add_current_repo=False)
+        context = PreferenceContext(auto_add_current_repo=False)
         context.add_path("./fulfillers")
         search = CodeSearch(context=context)
         result = await search.search("class")
@@ -34,7 +40,7 @@ async def test_add_git_repo():
     """Test adding git repo explicitly."""
     print("\nTest 3: Add git repo by path")
     try:
-        context = RipgrepContext(auto_add_current_repo=False)
+        context = PreferenceContext(auto_add_current_repo=False)
         context.add_git_repo(".")
         search = CodeSearch(context=context)
         result = await search.search("def search")
@@ -49,8 +55,8 @@ async def test_multiple_paths():
     """Test multiple paths in context."""
     print("\nTest 4: Multiple paths in context")
     try:
-        context = RipgrepContext(auto_add_current_repo=False)
-        context.add_path("./fulfillers/codesearch")
+        context = PreferenceContext(auto_add_current_repo=False)
+        context.add_path("./utils")
         context.add_path("./docs")
         print(f"  Context has {len(context)} paths")
         search = CodeSearch(context=context)
@@ -75,17 +81,17 @@ async def test_error_no_git_repo():
     """Test error when no git repo found."""
     print("\nTest 6: Error handling - no git repo")
     try:
-        context = RipgrepContext(auto_add_current_repo=False)
+        context = PreferenceContext(auto_add_current_repo=False)
         context.add_git_repo("/tmp")
         print("✗ Should have raised an error")
-    except RipgrepContextError as e:
+    except PreferenceContextError as e:
         print(f"✓ Correctly raised error: {e}")
     except Exception as e:
         print(f"✗ Unexpected error: {e}")
 
 
 async def main():
-    print("Testing RipgrepContext Implementation")
+    print("Testing PreferenceContext Implementation")
     print("=" * 50)
 
     # Check if ripgrep is available
