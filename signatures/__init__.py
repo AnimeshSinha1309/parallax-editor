@@ -9,6 +9,7 @@ context on expected agent behaviors.
 from .completions_singnature import InlineCompletion
 from .query_generator import RGQueryGenerator
 from .cards_refiner_signature import CardsRefiner
+from .web_query_generator import WebQueryGenerator
 
-__all__ = ["InlineCompletion", "RGQueryGenerator", "CardsRefiner"]
+__all__ = ["InlineCompletion", "RGQueryGenerator", "CardsRefiner", "WebQueryGenerator"]
 
