@@ -21,40 +21,41 @@ Parallax is a vim-inspired terminal text editor featuring a three-pane interface
 
 ## Requirements
 
-- Python 3.11 or higher
-- Textual TUI framework
+- Python 3.10 or higher
+- [uv](https://github.com/astral-sh/uv) - Fast Python package installer and resolver
 
 ## Installation
 
-1. Clone the repository:
+1. Install uv (if not already installed):
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+2. Clone the repository:
 ```bash
 git clone <repository-url>
 cd parallax
 ```
 
-2. Create a virtual environment (recommended):
+3. Set up the project (creates virtual environment and installs all dependencies):
 ```bash
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+uv sync --extra dev
 ```
 
-3. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
+That's it! `uv sync` automatically creates a `.venv` directory and installs all dependencies from `pyproject.toml`. The `--extra dev` flag ensures test dependencies (pytest) are also installed.
 
 ## Usage
 
 Run Parallax from the command line:
 
 ```bash
-python -m parallax.main
+uv run python -m parallax.main
 ```
 
 Or with a specific file:
 
 ```bash
-python -m parallax.main /path/to/file.md
+uv run python -m parallax.main /path/to/file.md
 ```
 
 ### Command Mode
@@ -97,10 +98,10 @@ parallax/
 
 ### Running Tests
 
-Make sure your virtual environment is activated, then run:
+Run tests using uv:
 
 ```bash
-pytest tests/ -v
+uv run pytest tests/ -v
 ```
 
 All tests should pass successfully. The test suite includes 44+ unit tests covering:

@@ -1,3 +1,1 @@
-"""
-Tests for Parallax.
-"""
+"""Tests for parallax code search SDK."""

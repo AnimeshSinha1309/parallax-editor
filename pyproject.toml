@@ -1,0 +1,27 @@
+[project]
+name = "parallax-code-search"
+version = "0.1.0"
+description = "Lightweight code search SDK using ripgrep"
+requires-python = ">=3.10"
+dependencies = [
+    "textual>=0.47.0",
+    "dspy>=3.0.0",
+    "requests>=2.31.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+]
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["parallax", "parallax.widgets", "parallax.core", "parallax.config", "fulfillers", "fulfillers.codesearch", "utils"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

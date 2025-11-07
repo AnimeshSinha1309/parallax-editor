@@ -502,7 +502,7 @@ Unlike Hound, ripgrep requires zero configuration. Just install and go.
 
 ```python
 import asyncio
-from code_search import CodeSearch
+from fulfillers.codesearch import CodeSearch
 
 async def main():
     search = CodeSearch()
@@ -673,7 +673,7 @@ function retryFetch(url, maxAttempts = 3) {
 
 ```python
 import pytest
-from code_search import CodeSearch, RipgrepSearch
+from fulfillers.codesearch import CodeSearch, RipgrepSearch
 import os
 
 FIXTURES_DIR = os.path.join(os.path.dirname(__file__), 'fixtures')
@@ -833,8 +833,8 @@ async def test_context_agent_integration():
 
 ```
 parallax-editor/
-├── src/
-│   └── code_search/
+├── fulfillers/
+│   └── codesearch/
 │       ├── __init__.py         # Exports: CodeSearch, SearchResult, SearchMatch
 │       ├── models.py           # SearchMatch, SearchResult dataclasses
 │       ├── base.py             # CodeSearchBackend ABC
@@ -889,7 +889,7 @@ build-backend = "setuptools.build_meta"
 ### Phase 1: Core Structure (20 min)
 
 **Tasks:**
-- [ ] Create `src/code_search/` directory
+- [ ] Create `fulfillers/codesearch/` directory
 - [ ] Implement `models.py` with `SearchMatch` and `SearchResult`
 - [ ] Implement `base.py` with `CodeSearchBackend` ABC
 - [ ] Set up `pyproject.toml`
@@ -897,7 +897,7 @@ build-backend = "setuptools.build_meta"
 
 **Validation:**
 ```python
-from code_search import SearchMatch, SearchResult
+from fulfillers.codesearch import SearchMatch, SearchResult
 match = SearchMatch("test.py", 42, "def test():")
 assert str(match) == "test.py:42"
 ```
@@ -921,7 +921,7 @@ rg --json -n "def" ./tests/fixtures/ | head -20
 # Then test your code
 python -c "
 import asyncio
-from code_search.ripgrep import RipgrepSearch
+from fulfillers.codesearch.ripgrep import RipgrepSearch
 
 async def test():
     rg = RipgrepSearch()
@@ -944,7 +944,7 @@ asyncio.run(test())
 
 **Validation:**
 ```python
-from code_search import CodeSearch
+from fulfillers.codesearch import CodeSearch
 import asyncio
 
 async def test():
@@ -1162,7 +1162,7 @@ async def search_cached(query, directory):
 
 ```python
 import asyncio
-from code_search import CodeSearch
+from fulfillers.codesearch import CodeSearch
 
 async def validate():
     search = CodeSearch()
@@ -1201,18 +1201,18 @@ asyncio.run(validate())
 **Setup (5 min):**
 - [ ] Install ripgrep: `brew install ripgrep`
 - [ ] Verify: `rg --version`
-- [ ] Create project structure: `mkdir -p src/code_search tests/fixtures`
+- [ ] Create project structure: `mkdir -p fulfillers/codesearch tests/fixtures`
 - [ ] Create `pyproject.toml`
 
 **Phase 1 - Models (20 min):**
-- [ ] Create `src/code_search/models.py`
+- [ ] Create `fulfillers/codesearch/models.py`
 - [ ] Define `SearchMatch` dataclass
 - [ ] Define `SearchResult` dataclass
 - [ ] Test: Import and create instances
 
 **Phase 2 - Backend (40 min):**
-- [ ] Create `src/code_search/base.py` with ABC
-- [ ] Create `src/code_search/ripgrep.py`
+- [ ] Create `fulfillers/codesearch/base.py` with ABC
+- [ ] Create `fulfillers/codesearch/ripgrep.py`
 - [ ] Implement `_build_command()`
 - [ ] Implement `_parse_json_output()` - **Read Section 4.4 carefully!**
 - [ ] Implement `search()` with error handling
@@ -1220,10 +1220,10 @@ asyncio.run(validate())
 - [ ] Test manually: `rg --json -n "test" .`
 
 **Phase 3 - Facade (10 min):**
-- [ ] Create `src/code_search/search.py`
+- [ ] Create `fulfillers/codesearch/search.py`
 - [ ] Implement `CodeSearch` wrapper
-- [ ] Create `src/code_search/__init__.py`
-- [ ] Test: `from code_search import CodeSearch`
+- [ ] Create `fulfillers/codesearch/__init__.py`
+- [ ] Test: `from fulfillers.codesearch import CodeSearch`
 
 **Phase 4 - Testing (30 min):**
 - [ ] Create sample files in `tests/fixtures/`
@@ -1256,7 +1256,7 @@ import asyncio
 import logging
 logging.basicConfig(level=logging.DEBUG)
 
-from code_search import CodeSearch
+from fulfillers.codesearch import CodeSearch
 
 async def test():
     search = CodeSearch()
