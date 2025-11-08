@@ -8,6 +8,7 @@ context on expected agent behaviors.
 
 from .completions_singnature import InlineCompletion
 from .query_generator import RGQueryGenerator
+from .question_ambiguity_signature import QuestionAmbiguityIdentifier
 
-__all__ = ["InlineCompletion", "RGQueryGenerator"]
+__all__ = ["InlineCompletion", "RGQueryGenerator", "QuestionAmbiguityIdentifier"]
 
