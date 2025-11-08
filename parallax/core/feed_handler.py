@@ -263,21 +263,30 @@ class FeedHandler:
             # Handle feed cards - update the sidebar
             if feed_cards:
                 logger.info(f"Processing {len(feed_cards)} feed card(s) for sidebar")
-                # Delete an arbitrary old item (if there are items to delete)
-                if len(self.feed_items) > 0:
-                    delete_index = random.randint(0, len(self.feed_items) - 1)
-                    deleted_item = self.feed_items.pop(delete_index)
-                    logger.debug(f"Deleted feed item at index {delete_index}: {deleted_item.header}")
 
-                # Add new cards at random positions
+                # Add new cards, enforcing max 3 cards per type
                 for card in feed_cards:
+                    # Count existing cards of this type
+                    same_type_cards = [c for c in self.feed_items if c.type == card.type]
+
+                    # If we already have 3 or more cards of this type, remove the oldest ones
+                    while len(same_type_cards) >= 3:
+                        # Find and remove the oldest card of this type (first occurrence)
+                        for i, existing_card in enumerate(self.feed_items):
+                            if existing_card.type == card.type:
+                                removed_card = self.feed_items.pop(i)
+                                logger.debug(f"Removed oldest card of type {card.type} at index {i}: {removed_card.header}")
+                                same_type_cards.pop(0)
+                                break
+
+                    # Add the new card at a random position
                     if len(self.feed_items) > 0:
                         insert_index = random.randint(0, len(self.feed_items))
                     else:
                         insert_index = 0
 
                     self.feed_items.insert(insert_index, card)
-                    logger.debug(f"Added feed item at index {insert_index}: {card.header}")
+                    logger.debug(f"Added feed item at index {insert_index}: {card.header} (type: {card.type})")
 
                 # Update the AI feed widget
                 if self.ai_feed:

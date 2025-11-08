@@ -15,7 +15,6 @@ from parallax.core.command_handler import CommandHandler
 from parallax.core.feed_handler import FeedHandler
 from parallax.core.logging_config import setup_logging, get_logger
 from fulfillers import Card, CardType
-from fulfillers.dummy import DummyFulfiller
 from fulfillers.completions import Completions
 from fulfillers.ambiguities import Ambiguities
 from fulfillers.web_context import WebContext
@@ -136,9 +135,6 @@ class ParallaxApp(App):
             logger.info("Completions fulfiller registered successfully")
         except Exception as e:
             logger.warning(f"Failed to register Completions fulfiller: {e}")
-            logger.info("Falling back to DummyFulfiller")
-            dummy_fulfiller = DummyFulfiller()
-            self.feed_handler.register_fulfiller(dummy_fulfiller)
 
         # Start in command mode by default
         command_input = self.query_one("#command-input", CommandInput)
