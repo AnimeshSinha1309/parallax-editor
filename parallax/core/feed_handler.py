@@ -10,6 +10,7 @@ from textual.widgets import TextArea
 from parallax.core.suggestion_tracker import SuggestionTracker
 from fulfillers import Fulfiller, Card, CardType
 from utils.context import GlobalPreferenceContext
+from utils.cards_refiner import CardsRefinerWrapper
 
 logger = logging.getLogger("parallax.feed_handler")
 
@@ -53,6 +54,8 @@ class FeedHandler:
         self._last_completion_triggered = False
         self._idle_task: Optional[asyncio.Task] = None
         self._ignoring_next_change = False
+        self.cards_refiner = CardsRefinerWrapper()
+        logger.debug("CardsRefinerWrapper initialized")
 
     def register_fulfiller(self, fulfiller: Fulfiller, trigger_type: str = "idle") -> None:
         """
@@ -300,25 +303,21 @@ class FeedHandler:
             # Handle feed cards - update the sidebar
             if feed_cards:
                 logger.info(f"Processing {len(feed_cards)} feed card(s) for sidebar")
-                # Delete an arbitrary old item (if there are items to delete)
-                if len(self.feed_items) > 0:
-                    delete_index = random.randint(0, len(self.feed_items) - 1)
-                    deleted_item = self.feed_items.pop(delete_index)
-                    logger.debug(f"Deleted feed item at index {delete_index}: {deleted_item.header}")
 
-                # Add new cards at random positions
-                for card in feed_cards:
-                    if len(self.feed_items) > 0:
-                        insert_index = random.randint(0, len(self.feed_items))
-                    else:
-                        insert_index = 0
+                # Use CardsRefiner to intelligently merge existing and new cards
+                logger.debug(f"Refining cards: {len(self.feed_items)} existing, {len(feed_cards)} new")
+                refined_cards = self.cards_refiner.refine_cards(
+                    existing_cards=self.feed_items,
+                    newly_proposed_cards=feed_cards
+                )
+                logger.info(f"Cards refined: {len(refined_cards)} cards after refinement")
 
-                    self.feed_items.insert(insert_index, card)
-                    logger.debug(f"Added feed item at index {insert_index}: {card.header}")
+                # Update feed items with refined cards
+                self.feed_items = refined_cards
 
                 # Update the AI feed widget
                 if self.ai_feed:
-                    logger.debug("Updating AI feed widget")
+                    logger.debug("Updating AI feed widget with refined cards")
                     self.ai_feed.update_content(self.feed_items)
                 else:
                     logger.warning("AI feed not set, cannot update sidebar")
