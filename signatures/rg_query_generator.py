@@ -48,3 +48,4 @@ def create_cached_predictor():
 
 
 __all__ = ["RGQueryGenerator", "create_cached_predictor"]
+

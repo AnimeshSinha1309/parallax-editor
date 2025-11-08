@@ -13,8 +13,8 @@ from .codebase_summary_signature import (
     summarize_codebase,
     summarize_codebase_async,
 )
-from .query_generator import RGQueryGenerator
-from .query_generator import create_cached_predictor as create_cached_rg_predictor
+from .rg_query_generator import RGQueryGenerator
+from .rg_query_generator import create_cached_predictor as create_cached_rg_predictor
 from .cards_refiner_signature import CardsRefiner
 from .web_query_generator import WebQueryGenerator
 from .web_query_generator import create_cached_predictor as create_cached_web_predictor
