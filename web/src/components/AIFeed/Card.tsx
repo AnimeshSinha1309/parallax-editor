@@ -1,23 +1,24 @@
 import { X, HelpCircle, Info, Lightbulb } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { useFeedStore } from '../../stores/feedStore';
-import { Card as CardType, CardType as CardTypeEnum } from '../../types/models';
+import type { Card as CardModel } from '../../types/models';
+import { CardType } from '../../types/models';
 import clsx from 'clsx';
 
 interface CardProps {
-  card: CardType;
+  card: CardModel;
 }
 
 const CARD_ICONS = {
-  [CardTypeEnum.QUESTION]: HelpCircle,
-  [CardTypeEnum.CONTEXT]: Info,
-  [CardTypeEnum.COMPLETION]: Lightbulb,
+  [CardType.QUESTION]: HelpCircle,
+  [CardType.CONTEXT]: Info,
+  [CardType.COMPLETION]: Lightbulb,
 };
 
 const CARD_COLORS = {
-  [CardTypeEnum.QUESTION]: 'text-vscode-accent-yellow',
-  [CardTypeEnum.CONTEXT]: 'text-vscode-accent-blue',
-  [CardTypeEnum.COMPLETION]: 'text-vscode-accent-green',
+  [CardType.QUESTION]: 'text-vscode-accent-yellow',
+  [CardType.CONTEXT]: 'text-vscode-accent-blue',
+  [CardType.COMPLETION]: 'text-vscode-accent-green',
 };
 
 export function Card({ card }: CardProps) {
