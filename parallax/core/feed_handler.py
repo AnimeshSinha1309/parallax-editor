@@ -23,7 +23,7 @@ class FeedHandler:
     Uses registered fulfillers to generate cards asynchronously.
     """
 
-    def __init__(self, threshold: int = 20, global_context: GlobalPreferenceContext = None, idle_timeout: float = 4.0):
+    def __init__(self, threshold: int = 20, global_context: GlobalPreferenceContext = None, idle_timeout: float = 4.0, enable_refiner: bool = True, max_cards_per_type: int = 3):
         """
         Initialize the feed handler.
 
@@ -31,12 +31,14 @@ class FeedHandler:
             threshold: Number of characters to type before triggering an update
             global_context: Global preference context containing scope root and plan path
             idle_timeout: Time in seconds to wait after last keystroke before triggering completion
+            enable_refiner: Whether to use CardsRefiner for intelligent card merging (default: True)
+            max_cards_per_type: Maximum number of cards to keep per card type (default: 3)
         """
         # Use default context if none provided
         if global_context is None:
             global_context = GlobalPreferenceContext(scope_root=".", plan_path=None)
 
-        logger.info(f"Initializing FeedHandler with threshold={threshold}, scope_root={global_context.scope_root}, plan_path={global_context.plan_path}, idle_timeout={idle_timeout}s")
+        logger.info(f"Initializing FeedHandler with threshold={threshold}, scope_root={global_context.scope_root}, plan_path={global_context.plan_path}, idle_timeout={idle_timeout}s, enable_refiner={enable_refiner}, max_cards_per_type={max_cards_per_type}")
         self.threshold = threshold
         self.idle_timeout = idle_timeout
         self.char_count = 0
@@ -54,8 +56,10 @@ class FeedHandler:
         self._last_completion_triggered = False
         self._idle_task: Optional[asyncio.Task] = None
         self._ignoring_next_change = False
-        self.cards_refiner = CardsRefinerWrapper()
-        logger.debug("CardsRefinerWrapper initialized")
+        self.enable_refiner = enable_refiner
+        self.max_cards_per_type = max_cards_per_type
+        self.cards_refiner = CardsRefinerWrapper(max_cards_per_type=max_cards_per_type)
+        logger.debug(f"CardsRefinerWrapper initialized (enabled={enable_refiner}, max_cards_per_type={max_cards_per_type})")
 
     def register_fulfiller(self, fulfiller: Fulfiller, trigger_type: str = "idle") -> None:
         """
@@ -304,16 +308,19 @@ class FeedHandler:
             if feed_cards:
                 logger.info(f"Processing {len(feed_cards)} feed card(s) for sidebar")
 
-                # Use CardsRefiner to intelligently merge existing and new cards
-                logger.debug(f"Refining cards: {len(self.feed_items)} existing, {len(feed_cards)} new")
-                refined_cards = self.cards_refiner.refine_cards(
-                    existing_cards=self.feed_items,
-                    newly_proposed_cards=feed_cards
-                )
-                logger.info(f"Cards refined: {len(refined_cards)} cards after refinement")
-
-                # Update feed items with refined cards
-                self.feed_items = refined_cards
+                if self.enable_refiner:
+                    # Use CardsRefiner to intelligently merge existing and new cards
+                    logger.debug(f"Refining cards: {len(self.feed_items)} existing, {len(feed_cards)} new")
+                    refined_cards = self.cards_refiner.refine_cards(
+                        existing_cards=self.feed_items,
+                        newly_proposed_cards=feed_cards
+                    )
+                    logger.info(f"Cards refined: {len(refined_cards)} cards after refinement")
+                    self.feed_items = refined_cards
+                else:
+                    # Refiner disabled - delete all old cards and keep only new ones
+                    logger.info("CardsRefiner disabled, replacing all existing cards with new ones")
+                    self.feed_items = feed_cards
 
                 # Update the AI feed widget
                 if self.ai_feed:

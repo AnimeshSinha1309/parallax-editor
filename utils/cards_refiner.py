@@ -30,9 +30,15 @@ class CardsRefinerWrapper:
     incorporating new information.
     """
 
-    def __init__(self):
-        """Initialize the CardsRefinerWrapper with the DSPy signature."""
-        logger.info("Initializing CardsRefinerWrapper")
+    def __init__(self, max_cards_per_type: int = 3):
+        """
+        Initialize the CardsRefinerWrapper with the DSPy signature.
+
+        Args:
+            max_cards_per_type: Maximum number of cards to keep per card type (default: 3)
+        """
+        logger.info(f"Initializing CardsRefinerWrapper with max_cards_per_type={max_cards_per_type}")
+        self.max_cards_per_type = max_cards_per_type
         self.lm = get_lm()
         if self.lm is None:
             logger.warning("No LM available, CardsRefinerWrapper will not function")
@@ -53,7 +59,7 @@ class CardsRefinerWrapper:
             {
                 "header": card.header,
                 "text": card.text,
-                "metadata": card.metadata
+                "metadata": {**card.metadata, "type": card.type.value}
             }
             for card in cards
         ]
@@ -82,19 +88,25 @@ class CardsRefinerWrapper:
                     logger.warning(f"Skipping non-dict item: {item}")
                     continue
 
-                # Extract card type from metadata if available, otherwise use default
+                metadata = item.get("metadata", {})
+
+                # Extract card type from metadata if available, otherwise from direct field
                 card_type = default_type
-                if "type" in item:
+                type_value = metadata.get("type") or item.get("type")
+                if type_value:
                     try:
-                        card_type = CardType(item["type"])
+                        card_type = CardType(type_value)
                     except ValueError:
-                        logger.warning(f"Invalid card type: {item['type']}, using default {default_type}")
+                        logger.warning(f"Invalid card type: {type_value}, using default {default_type}")
+
+                # Remove type from metadata since it's stored in the Card object itself
+                metadata_copy = {k: v for k, v in metadata.items() if k != "type"}
 
                 card = Card(
                     header=item.get("header", ""),
                     text=item.get("text", ""),
                     type=card_type,
-                    metadata=item.get("metadata", {})
+                    metadata=metadata_copy
                 )
                 cards.append(card)
 
@@ -107,6 +119,34 @@ class CardsRefinerWrapper:
         except Exception as e:
             logger.error(f"Error converting JSON to cards: {e}", exc_info=True)
             return []
+
+    def _limit_cards_per_type(self, cards: List[Card]) -> List[Card]:
+        """
+        Limit the number of cards per card type.
+
+        Args:
+            cards: List of Card objects to limit
+
+        Returns:
+            List of Card objects with at most max_cards_per_type per type
+        """
+        # Group cards by type
+        cards_by_type = {}
+        for card in cards:
+            if card.type not in cards_by_type:
+                cards_by_type[card.type] = []
+            cards_by_type[card.type].append(card)
+
+        # Limit each type to max_cards_per_type
+        limited_cards = []
+        for card_type, type_cards in cards_by_type.items():
+            limited = type_cards[:self.max_cards_per_type]
+            limited_cards.extend(limited)
+            if len(type_cards) > self.max_cards_per_type:
+                logger.debug(f"Limited {card_type.value} cards from {len(type_cards)} to {self.max_cards_per_type}")
+
+        logger.debug(f"Card limiting: {len(cards)} input -> {len(limited_cards)} output")
+        return limited_cards
 
     def refine_cards(self, existing_cards: List[Card], newly_proposed_cards: List[Card]) -> List[Card]:
         """
@@ -127,18 +167,18 @@ class CardsRefinerWrapper:
 
         # If no LM is available, fall back to simple append behavior
         if self.lm is None:
-            logger.warning("No LM available, returning newly proposed cards only")
-            return newly_proposed_cards
+            logger.warning("No LM available, returning newly proposed cards only (limited per type)")
+            return self._limit_cards_per_type(newly_proposed_cards)
 
-        # If there are no existing cards, just return the new ones
+        # If there are no existing cards, just return the new ones (limited)
         if not existing_cards:
-            logger.info("No existing cards, returning newly proposed cards")
-            return newly_proposed_cards
+            logger.info("No existing cards, returning newly proposed cards (limited per type)")
+            return self._limit_cards_per_type(newly_proposed_cards)
 
-        # If there are no new cards, keep existing ones
+        # If there are no new cards, keep existing ones (limited)
         if not newly_proposed_cards:
-            logger.info("No newly proposed cards, keeping existing cards")
-            return existing_cards
+            logger.info("No newly proposed cards, keeping existing cards (limited per type)")
+            return self._limit_cards_per_type(existing_cards)
 
         try:
             # Convert cards to JSON format
@@ -152,11 +192,12 @@ class CardsRefinerWrapper:
             with dspy.context(lm=self.lm):
                 # Create and invoke the signature
                 refiner = dspy.Predict(CardsRefiner)
-                logger.debug("Invoking CardsRefiner signature")
+                logger.debug(f"Invoking CardsRefiner signature with max_cards_per_type={self.max_cards_per_type}")
 
                 result = refiner(
                     existing_cards=existing_json,
-                    newly_proposed_cards=new_json
+                    newly_proposed_cards=new_json,
+                    max_cards_per_type=str(self.max_cards_per_type)
                 )
 
                 logger.debug(f"CardsRefiner result: {result.refined_cards[:200]}...")
@@ -171,13 +212,16 @@ class CardsRefinerWrapper:
                     if card.header in new_cards_by_header:
                         card.type = new_cards_by_header[card.header]
 
-                logger.info(f"Refinement complete: {len(refined_cards)} refined cards")
+                # Apply limiting as a safety measure in case the LM didn't respect the limit
+                refined_cards = self._limit_cards_per_type(refined_cards)
+
+                logger.info(f"Refinement complete: {len(refined_cards)} refined cards (limited per type)")
                 return refined_cards
 
         except Exception as e:
             logger.error(f"Error during card refinement: {e}", exc_info=True)
             logger.warning("Falling back to newly proposed cards due to error")
-            return newly_proposed_cards
+            return self._limit_cards_per_type(newly_proposed_cards)
 
 
 __all__ = ["CardsRefinerWrapper"]
