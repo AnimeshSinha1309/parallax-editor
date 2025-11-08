@@ -18,6 +18,7 @@ from fulfillers import Card, CardType
 from fulfillers.dummy import DummyFulfiller
 from fulfillers.completions import Completions
 from fulfillers.ambiguities import Ambiguities
+from fulfillers.web_context import WebContext
 from utils.context import GlobalPreferenceContext
 from textual import events
 
@@ -119,6 +120,14 @@ class ParallaxApp(App):
             logger.info("Ambiguities fulfiller registered successfully with immediate trigger")
         except Exception as e:
             logger.warning(f"Failed to register Ambiguities fulfiller: {e}")
+
+        # Register WebContext fulfiller (immediate trigger after 20 characters)
+        try:
+            web_context_fulfiller = WebContext()
+            self.feed_handler.register_fulfiller(web_context_fulfiller, trigger_type="immediate")
+            logger.info("WebContext fulfiller registered successfully with immediate trigger")
+        except Exception as e:
+            logger.warning(f"Failed to register WebContext fulfiller: {e}")
 
         # Register Completions fulfiller (idle trigger after timeout)
         try:

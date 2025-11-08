@@ -16,6 +16,28 @@ class SearchResponse:
     error: Optional[str] = None
     raw_response: Optional[Dict[str, Any]] = None
 
+    def to_citation_list(self) -> List[str]:
+        """
+        Serialize search response to a list of citation-content strings.
+
+        Returns:
+            List of strings in the format ["citation_1: content", "citation_2: content", ...]
+            If no citations are available, returns a single-element list with just the content.
+        """
+        if not self.success:
+            return []
+
+        if not self.citations:
+            # No citations, return content as-is
+            return [self.content]
+
+        # Format as citation_N: content
+        result = []
+        for i, citation in enumerate(self.citations, 1):
+            result.append(f"{citation}: {self.content}")
+
+        return result
+
 
 class PerplexitySearch:
     """
