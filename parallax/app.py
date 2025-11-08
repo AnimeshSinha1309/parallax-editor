@@ -17,7 +17,7 @@ from parallax.core.logging_config import setup_logging, get_logger
 from fulfillers import Card, CardType
 from fulfillers.dummy import DummyFulfiller
 from fulfillers.completions import Completions
-from fulfillers.models import GlobalPreferenceContext
+from utils.context import GlobalPreferenceContext
 from textual import events
 
 logger = get_logger("parallax.app")

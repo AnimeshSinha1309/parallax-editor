@@ -5,7 +5,7 @@ Entry point for the Parallax text editor.
 import argparse
 from pathlib import Path
 from parallax.app import ParallaxApp
-from fulfillers.models import GlobalPreferenceContext
+from utils.context import GlobalPreferenceContext
 
 
 def main():

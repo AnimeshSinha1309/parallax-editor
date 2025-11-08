@@ -3,9 +3,9 @@
 from typing import Optional, List, Tuple, Any
 
 from ..base import Fulfiller
-from ..models import Card, CardType, GlobalPreferenceContext
+from ..models import Card, CardType
+from utils.context import GlobalPreferenceContext
 from utils.ripgrep import RipgrepSearch, SearchResult, SearchMatch
-from utils.context import PreferenceContext
 
 
 class CodeSearch(Fulfiller):
@@ -20,14 +20,8 @@ class CodeSearch(Fulfiller):
         search = CodeSearch()
         result = await search.search("def.*retry", "/path/to/code")
 
-        # Search using context (auto-discovers git repo)
+        # Search in current directory
         search = CodeSearch()
-        result = await search.search("def.*retry")
-
-        # Search with custom context
-        context = PreferenceContext()
-        context.add_path("/path/to/code")
-        search = CodeSearch(context=context)
         result = await search.search("def.*retry")
 
         for match in result.matches:
@@ -36,22 +30,19 @@ class CodeSearch(Fulfiller):
 
     def __init__(
         self,
-        context: Optional[PreferenceContext] = None,
         max_results: int = 50,
         context_lines: int = 2,
         case_sensitive: bool = False,
     ):
         """
-        Initialize CodeSearch with an optional context and default search parameters.
+        Initialize CodeSearch with default search parameters.
 
         Args:
-            context: PreferenceContext defining which directories/files to search.
-                    If None, context will be auto-created when needed.
             max_results: Default maximum matches to return (default 50)
             context_lines: Default lines of context before/after match (default 2)
             case_sensitive: Default case sensitivity (default False)
         """
-        self.backend = RipgrepSearch(context=context)
+        self.backend = RipgrepSearch()
         self.default_max_results = max_results
         self.default_context_lines = context_lines
         self.default_case_sensitive = case_sensitive

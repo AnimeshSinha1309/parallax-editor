@@ -5,8 +5,6 @@ import json
 from dataclasses import dataclass, field
 from typing import List, Optional
 
-from .context import PreferenceContext
-
 
 @dataclass
 class SearchMatch:
@@ -50,15 +48,9 @@ class RipgrepSearch:
         - Must be in PATH
     """
 
-    def __init__(self, context: Optional[PreferenceContext] = None):
-        """
-        Initialize RipgrepSearch with an optional context.
-
-        Args:
-            context: PreferenceContext defining which directories/files to search.
-                    If None, a new context will be created when needed.
-        """
-        self.context = context
+    def __init__(self):
+        """Initialize RipgrepSearch."""
+        pass
 
     async def search(
         self,
@@ -73,7 +65,7 @@ class RipgrepSearch:
 
         Args:
             query: Regex pattern to search for
-            directory: Directory to search in. If None, uses paths from context.
+            directory: Directory to search in. If None, uses current directory.
             max_results: Maximum total matches to return (default 50)
             context_lines: Lines of context before/after match (default 2)
             case_sensitive: Whether search is case-sensitive (default False)
@@ -84,21 +76,10 @@ class RipgrepSearch:
         try:
             # Determine search paths
             if directory is not None:
-                # Use provided directory (backwards compatible)
                 search_paths = [directory]
             else:
-                # Use context paths
-                if self.context is None:
-                    self.context = PreferenceContext()
-                try:
-                    search_paths = [str(p) for p in self.context.get_paths()]
-                except Exception as e:
-                    return SearchResult(
-                        matches=[],
-                        total_matches=0,
-                        query=query,
-                        error=f"Context error: {str(e)}",
-                    )
+                # Default to current directory
+                search_paths = ["."]
 
             # Build ripgrep command
             cmd = self._build_command(

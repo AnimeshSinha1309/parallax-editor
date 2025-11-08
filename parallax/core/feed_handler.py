@@ -9,7 +9,7 @@ from typing import Optional, List, Tuple
 from textual.widgets import TextArea
 from parallax.core.suggestion_tracker import SuggestionTracker
 from fulfillers import Fulfiller, Card, CardType
-from fulfillers.models import GlobalPreferenceContext
+from utils.context import GlobalPreferenceContext
 
 logger = logging.getLogger("parallax.feed_handler")
 
