@@ -316,9 +316,9 @@ class FeedHandler:
 
                         logger.debug(f"Cached endpoint returned {len(cards)} cards (processing={processing})")
 
-                        # Update UI with new cards
-                        if cards:
-                            self._update_ui_with_cards(cards)
+                        # Always update UI with cards from server (replaces entire feed)
+                        # This ensures UI stays in sync with server's cache
+                        self._update_ui_with_cards(cards)
 
                         # Stop polling if backend finished processing
                         if not processing:
@@ -361,8 +361,8 @@ class FeedHandler:
             self.text_editor.set_ghost_text(completion_text)
             self._last_completion_triggered = True
 
-        # Update AI feed if we have feed cards
-        if feed_cards and self.ai_feed:
+        # Always update AI feed with current feed cards (may be empty to clear the feed)
+        if self.ai_feed:
             logger.debug(f"Updating AI feed with {len(feed_cards)} cards")
             self.ai_feed.update_content(feed_cards)
 
@@ -402,64 +402,9 @@ class FeedHandler:
 
             logger.info(f"Total cards received: {len(all_cards)}")
 
-            # Separate cards by type
-            completion_cards = [c for c in all_cards if c.type == CardType.COMPLETION]
-            feed_cards = [c for c in all_cards if c.type in (CardType.QUESTION, CardType.CONTEXT)]
-
-            logger.info(f"Separated cards: {len(completion_cards)} COMPLETION, {len(feed_cards)} QUESTION/CONTEXT")
-
-            # Handle ghost text completions
-            if completion_cards:
-                logger.info(f"Processing {len(completion_cards)} completion card(s) for ghost text")
-                if self.text_editor:
-                    # Use the first completion card
-                    completion_text = completion_cards[0].text
-                    logger.info(f"Setting ghost text: {completion_text[:50]}...")
-                    self.text_editor.set_ghost_text(completion_text)
-                    # Mark that we've triggered a completion - don't trigger again until user interacts
-                    self._last_completion_triggered = True
-                    logger.debug("Ghost text set successfully, completion flag set")
-                else:
-                    logger.error("TextEditor not set, cannot render ghost text")
-            else:
-                logger.debug("No completion cards received")
-
-            # Handle feed cards - update the sidebar
-            if feed_cards:
-                logger.info(f"Processing {len(feed_cards)} feed card(s) for sidebar")
-
-                # Add new cards, enforcing max 3 cards per type
-                for card in feed_cards:
-                    # Count existing cards of this type
-                    same_type_cards = [c for c in self.feed_items if c.type == card.type]
-
-                    # If we already have 3 or more cards of this type, remove the oldest ones
-                    while len(same_type_cards) >= 3:
-                        # Find and remove the oldest card of this type (first occurrence)
-                        for i, existing_card in enumerate(self.feed_items):
-                            if existing_card.type == card.type:
-                                removed_card = self.feed_items.pop(i)
-                                logger.debug(f"Removed oldest card of type {card.type} at index {i}: {removed_card.header}")
-                                same_type_cards.pop(0)
-                                break
-
-                    # Add the new card at a random position
-                    if len(self.feed_items) > 0:
-                        insert_index = random.randint(0, len(self.feed_items))
-                    else:
-                        insert_index = 0
-
-                    self.feed_items.insert(insert_index, card)
-                    logger.debug(f"Added feed item at index {insert_index}: {card.header} (type: {card.type})")
-
-                # Update the AI feed widget
-                if self.ai_feed:
-                    logger.debug("Updating AI feed widget")
-                    self.ai_feed.update_content(self.feed_items)
-                else:
-                    logger.warning("AI feed not set, cannot update sidebar")
-            else:
-                logger.debug("No feed cards to process")
+            # Backend manages card ordering and limits, so just replace the entire feed
+            # This ensures consistency with polling updates from /cached endpoint
+            self._update_ui_with_cards(all_cards)
 
         except Exception as e:
             logger.error(f"Error during update: {e}", exc_info=True)
