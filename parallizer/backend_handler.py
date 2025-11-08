@@ -495,6 +495,37 @@ async def clear_user_feed(user_id: str):
         return {"status": "not_found", "message": f"No cache found for user {user_id}"}
 
 
+@app.get("/files/debug")
+async def debug_file_access(scope_root: str):
+    """
+    Debug endpoint to check file system access.
+
+    Returns information about path accessibility.
+    """
+    import os
+    from pathlib import Path
+
+    try:
+        resolved = Path(scope_root).expanduser().resolve()
+
+        return {
+            "original_path": scope_root,
+            "resolved_path": str(resolved),
+            "exists": resolved.exists(),
+            "is_dir": resolved.is_dir() if resolved.exists() else False,
+            "is_file": resolved.is_file() if resolved.exists() else False,
+            "current_working_dir": os.getcwd(),
+            "home_dir": str(Path.home()),
+            "accessible": os.access(str(resolved), os.R_OK) if resolved.exists() else False,
+        }
+    except Exception as e:
+        return {
+            "original_path": scope_root,
+            "error": str(e),
+            "error_type": type(e).__name__,
+        }
+
+
 @app.get("/files/tree", response_model=FileTreeResponse)
 async def get_file_tree(scope_root: str, max_depth: int = 10):
     """
@@ -508,7 +539,12 @@ async def get_file_tree(scope_root: str, max_depth: int = 10):
         FileTreeResponse with nested structure
     """
     try:
-        logger.info(f"File tree request for scope: {scope_root}")
+        from pathlib import Path
+        resolved = Path(scope_root).expanduser().resolve()
+
+        logger.info(f"File tree request for scope: '{scope_root}'")
+        logger.info(f"Resolved to: '{resolved}'")
+        logger.info(f"Exists: {resolved.exists()}, Is dir: {resolved.is_dir() if resolved.exists() else 'N/A'}")
 
         # Create file system manager for this scope
         fs_manager = FileSystemManager(scope_root)
@@ -520,11 +556,11 @@ async def get_file_tree(scope_root: str, max_depth: int = 10):
         return tree.to_dict()
 
     except ValueError as e:
-        logger.error(f"Invalid scope: {e}")
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.error(f"Invalid scope '{scope_root}': {e}")
+        raise HTTPException(status_code=400, detail=f"Invalid scope '{scope_root}': {str(e)}")
     except Exception as e:
-        logger.error(f"Error getting file tree: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        logger.error(f"Error getting file tree for '{scope_root}': {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Cannot access '{scope_root}': {str(e)}")
 
 
 @app.post("/files/content", response_model=FileContentResponse)
