@@ -17,6 +17,7 @@ from parallax.core.logging_config import setup_logging, get_logger
 from fulfillers import Card, CardType
 from fulfillers.dummy import DummyFulfiller
 from fulfillers.completions import Completions
+from fulfillers.models import GlobalPreferenceContext
 from textual import events
 
 logger = get_logger("parallax.app")
@@ -53,23 +54,29 @@ class ParallaxApp(App):
         ("escape", "exit_to_command", "Command mode"),
     ]
 
-    def __init__(self, root_path: str = ".", **kwargs):
+    def __init__(self, global_context: GlobalPreferenceContext = None, **kwargs):
         """
         Initialize the Parallax application.
 
         Args:
-            root_path: The root directory for the file explorer
+            global_context: Global preference context containing scope root and plan path
             **kwargs: Additional keyword arguments for App
         """
         # Set up logging before anything else
         setup_logging(log_level="INFO")
-        logger.info(f"Initializing Parallax application with root_path={root_path}")
+
+        # Use default context if none provided
+        if global_context is None:
+            global_context = GlobalPreferenceContext(scope_root=".", plan_path=None)
+
+        logger.info(f"Initializing Parallax application with scope_root={global_context.scope_root}, plan_path={global_context.plan_path}")
 
         super().__init__(**kwargs)
-        self.root_path = root_path
+        self.global_context = global_context
+        self.root_path = global_context.scope_root  # For backwards compatibility with widgets
         self.command_handler = CommandHandler()
         self.yankboard = ""  # For yank/paste operations
-        self.feed_handler = FeedHandler(threshold=20, scope_root=root_path)  # Trigger every 20 characters
+        self.feed_handler = FeedHandler(threshold=20, global_context=global_context)  # Trigger every 20 characters
         logger.debug("FeedHandler initialized")
 
     def compose(self) -> ComposeResult:

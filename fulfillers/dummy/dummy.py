@@ -5,7 +5,7 @@ import logging
 from typing import List, Tuple, Any, Optional
 
 from fulfillers.base import Fulfiller
-from fulfillers.models import Card, CardType
+from fulfillers.models import Card, CardType, GlobalPreferenceContext
 
 logger = logging.getLogger("parallax.dummy_fulfiller")
 
@@ -25,7 +25,7 @@ class DummyFulfiller(Fulfiller):
         self,
         document_text: str,
         cursor_position: Tuple[int, int],
-        scope_root: str,
+        global_context: GlobalPreferenceContext,
         intent_label: Optional[str] = None,
         **kwargs
     ) -> List[Card]:
@@ -35,14 +35,14 @@ class DummyFulfiller(Fulfiller):
         Args:
             document_text: Current file content (unused in dummy implementation)
             cursor_position: Cursor position (unused in dummy implementation)
-            scope_root: Root directory path (unused in dummy implementation)
+            global_context: Global preference context (unused in dummy implementation)
             intent_label: Optional intent label (unused in dummy implementation)
             **kwargs: Additional parameters
 
         Returns:
             List of 1-3 random placeholder cards
         """
-        logger.info(f"DummyFulfiller invoked at {cursor_position}, scope_root={scope_root}")
+        logger.info(f"DummyFulfiller invoked at {cursor_position}, scope_root={global_context.scope_root}, plan_path={global_context.plan_path}")
         all_cards = [
             # CONTEXT cards - contextual information
             Card(

@@ -9,6 +9,7 @@ from typing import Optional, List, Tuple
 from textual.widgets import TextArea
 from parallax.core.suggestion_tracker import SuggestionTracker
 from fulfillers import Fulfiller, Card, CardType
+from fulfillers.models import GlobalPreferenceContext
 
 logger = logging.getLogger("parallax.feed_handler")
 
@@ -21,22 +22,26 @@ class FeedHandler:
     Uses registered fulfillers to generate cards asynchronously.
     """
 
-    def __init__(self, threshold: int = 20, scope_root: str = ".", idle_timeout: float = 4.0):
+    def __init__(self, threshold: int = 20, global_context: GlobalPreferenceContext = None, idle_timeout: float = 4.0):
         """
         Initialize the feed handler.
 
         Args:
             threshold: Number of characters to type before triggering an update
-            scope_root: Root directory path for the scope
+            global_context: Global preference context containing scope root and plan path
             idle_timeout: Time in seconds to wait after last keystroke before triggering completion
         """
-        logger.info(f"Initializing FeedHandler with threshold={threshold}, scope_root={scope_root}, idle_timeout={idle_timeout}s")
+        # Use default context if none provided
+        if global_context is None:
+            global_context = GlobalPreferenceContext(scope_root=".", plan_path=None)
+
+        logger.info(f"Initializing FeedHandler with threshold={threshold}, scope_root={global_context.scope_root}, plan_path={global_context.plan_path}, idle_timeout={idle_timeout}s")
         self.threshold = threshold
         self.idle_timeout = idle_timeout
         self.char_count = 0
         self.last_content = ""
         self.cursor_position: Tuple[int, int] = (0, 0)
-        self.scope_root = scope_root
+        self.global_context = global_context
         self.ai_feed = None
         self.text_editor = None
         self.feed_items: List[Card] = []
@@ -199,12 +204,12 @@ class FeedHandler:
 
         try:
             # Invoke all fulfillers concurrently
-            logger.debug(f"Invoking fulfillers with cursor_position={self.cursor_position}, scope_root={self.scope_root}")
+            logger.debug(f"Invoking fulfillers with cursor_position={self.cursor_position}, global_context={self.global_context}")
             tasks = [
                 fulfiller.invoke(
                     document_text=document_text,
                     cursor_position=self.cursor_position,
-                    scope_root=self.scope_root,
+                    global_context=self.global_context,
                     intent_label="editor_update"
                 )
                 for fulfiller in self.fulfillers

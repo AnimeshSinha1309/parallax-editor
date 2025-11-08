@@ -3,14 +3,14 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional, Tuple
 
-from .models import Card
+from .models import Card, GlobalPreferenceContext
 
 
 class Fulfiller(ABC):
     """
     Abstract base class for all fulfiller implementations.
 
-    A fulfiller takes user context (document text, parser position, scope root)
+    A fulfiller takes user context (document text, cursor position, global preferences)
     and optionally an intent label, then returns a list of cards with relevant information.
 
     Examples of fulfillers:
@@ -24,7 +24,7 @@ class Fulfiller(ABC):
         self,
         document_text: str,
         cursor_position: Tuple[int, int],
-        scope_root: str,
+        global_context: GlobalPreferenceContext,
         intent_label: Optional[str] = None,
         **kwargs
     ) -> List[Card]:
@@ -34,7 +34,7 @@ class Fulfiller(ABC):
         Args:
             document_text: The entire text content of the current document as a string
             cursor_position: (line, column) position of the cursor
-            scope_root: Root directory path for the scope
+            global_context: Global preference context containing scope root and plan path
             intent_label: Optional LLM-generated intent or label describing the query
             **kwargs: Additional fulfiller-specific parameters
 

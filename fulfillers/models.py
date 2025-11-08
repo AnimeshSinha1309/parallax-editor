@@ -5,6 +5,19 @@ from enum import Enum
 from typing import Optional, Dict, Any
 
 
+@dataclass
+class GlobalPreferenceContext:
+    """
+    Global context information passed to all fulfillers.
+
+    Contains application-wide preferences and paths that fulfillers may need
+    to properly execute their tasks.
+    """
+
+    scope_root: str  # Root directory path for the scope
+    plan_path: Optional[str] = None  # Path to the markdown plan file being edited
+
+
 class CardType(Enum):
     """Type of card returned by a fulfiller."""
     QUESTION = "question"      # Clarifying questions for the user

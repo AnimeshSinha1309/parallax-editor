@@ -3,7 +3,7 @@
 from typing import Optional, List, Tuple, Any
 
 from ..base import Fulfiller
-from ..models import Card, CardType
+from ..models import Card, CardType, GlobalPreferenceContext
 from utils.ripgrep import RipgrepSearch, SearchResult, SearchMatch
 from utils.context import PreferenceContext
 
@@ -58,21 +58,21 @@ class CodeSearch(Fulfiller):
 
     async def invoke(
         self,
-        text_buffer: str,
+        document_text: str,
         cursor_position: Tuple[int, int],
-        query_intent: str,
-        context: Optional[Any] = None,
+        global_context: GlobalPreferenceContext,
+        intent_label: Optional[str] = None,
         **kwargs
     ) -> List[Card]:
         """
         Invoke code search fulfiller.
 
         Args:
-            text_buffer: All text in the current file (currently unused)
-            cursor_position: Cursor position (currently unused)
-            query_intent: The search query/pattern to look for
-            context: Optional directory path to search in
-            **kwargs: Additional search parameters (max_results, context_lines, case_sensitive)
+            document_text: The entire text content of the current document (currently unused)
+            cursor_position: (line, column) position of the cursor (currently unused)
+            global_context: Global preference context containing scope root and plan path
+            intent_label: Optional search query/pattern to look for
+            **kwargs: Additional search parameters (max_results, context_lines, case_sensitive, query)
 
         Returns:
             List of Card objects with search results
@@ -81,11 +81,23 @@ class CodeSearch(Fulfiller):
         max_results = kwargs.get('max_results', self.default_max_results)
         context_lines = kwargs.get('context_lines', self.default_context_lines)
         case_sensitive = kwargs.get('case_sensitive', self.default_case_sensitive)
-        directory = kwargs.get('directory', context)
+
+        # Use scope_root from global_context as the directory to search
+        directory = kwargs.get('directory', global_context.scope_root)
+
+        # Use intent_label or 'query' kwarg as the search query
+        query = kwargs.get('query', intent_label)
+        if not query:
+            return [Card(
+                header="No Query",
+                text="No search query provided",
+                type=CardType.CONTEXT,
+                metadata={"error": "missing_query"}
+            )]
 
         # Perform the search
         result = await self.search(
-            query=query_intent,
+            query=query,
             directory=directory,
             max_results=max_results,
             context_lines=context_lines,

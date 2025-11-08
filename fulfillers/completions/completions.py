@@ -1,7 +1,7 @@
 from utils import get_lm
 from signatures.completions_singnature import InlineCompletion
 from fulfillers.base import Fulfiller
-from fulfillers.models import Card, CardType
+from fulfillers.models import Card, CardType, GlobalPreferenceContext
 from typing import List, Tuple, Optional
 from abc import ABCMeta
 import dspy
@@ -36,7 +36,7 @@ class Completions(Fulfiller, dspy.Module, metaclass=CombinedMeta):
         self,
         document_text: str,
         cursor_position: Tuple[int, int],
-        scope_root: str,
+        global_context: GlobalPreferenceContext,
         intent_label: Optional[str] = None,
         **kwargs
     ) -> List[Card]:
@@ -46,7 +46,7 @@ class Completions(Fulfiller, dspy.Module, metaclass=CombinedMeta):
         Args:
             document_text: The entire text content of the current document
             cursor_position: (line, column) position of the parser/cursor
-            scope_root: Root directory path for the scope (currently unused)
+            global_context: Global preference context containing scope root and plan path
             intent_label: Optional LLM-generated intent or label describing the query
             **kwargs: Additional parameters
 
@@ -94,7 +94,7 @@ class Completions(Fulfiller, dspy.Module, metaclass=CombinedMeta):
         self,
         document_text: str,
         cursor_position: Tuple[int, int],
-        scope_root: str,
+        global_context: GlobalPreferenceContext,
         intent_label: Optional[str] = None,
         **kwargs
     ) -> List[Card]:
@@ -104,18 +104,18 @@ class Completions(Fulfiller, dspy.Module, metaclass=CombinedMeta):
         Args:
             document_text: The entire text content of the current document
             cursor_position: (line, column) position of the parser/cursor
-            scope_root: Root directory path for the scope (currently unused)
+            global_context: Global preference context containing scope root and plan path
             intent_label: Optional LLM-generated intent or label describing the query
             **kwargs: Additional parameters
 
         Returns:
             List of Card objects with completion results
         """
-        logger.info(f"Completions fulfiller invoked at {cursor_position}, scope_root={scope_root}")
+        logger.info(f"Completions fulfiller invoked at {cursor_position}, scope_root={global_context.scope_root}, plan_path={global_context.plan_path}")
         return self.forward(
             document_text=document_text,
             cursor_position=cursor_position,
-            scope_root=scope_root,
+            global_context=global_context,
             intent_label=intent_label,
             **kwargs
         )
