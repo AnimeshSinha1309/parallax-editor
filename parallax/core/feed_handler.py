@@ -21,16 +21,18 @@ class FeedHandler:
     Uses registered fulfillers to generate cards asynchronously.
     """
 
-    def __init__(self, threshold: int = 20, scope_root: str = "."):
+    def __init__(self, threshold: int = 20, scope_root: str = ".", idle_timeout: float = 4.0):
         """
         Initialize the feed handler.
 
         Args:
             threshold: Number of characters to type before triggering an update
             scope_root: Root directory path for the scope
+            idle_timeout: Time in seconds to wait after last keystroke before triggering completion
         """
-        logger.info(f"Initializing FeedHandler with threshold={threshold}, scope_root={scope_root}")
+        logger.info(f"Initializing FeedHandler with threshold={threshold}, scope_root={scope_root}, idle_timeout={idle_timeout}s")
         self.threshold = threshold
+        self.idle_timeout = idle_timeout
         self.char_count = 0
         self.last_content = ""
         self.cursor_position: Tuple[int, int] = (0, 0)
@@ -41,6 +43,9 @@ class FeedHandler:
         self.suggestion_tracker = SuggestionTracker()
         self.fulfillers: List[Fulfiller] = []
         self._update_in_progress = False
+        self._last_completion_triggered = False
+        self._idle_task: Optional[asyncio.Task] = None
+        self._ignoring_next_change = False
 
     def register_fulfiller(self, fulfiller: Fulfiller) -> None:
         """
@@ -99,17 +104,45 @@ class FeedHandler:
         """
         self.cursor_position = position
 
-    def on_text_change(self, new_content: str, cursor_position: Optional[Tuple[int, int]] = None) -> None:
+    def reset_completion_flag(self) -> None:
+        """Reset the completion triggered flag, allowing new completions to be requested."""
+        logger.debug("Resetting completion flag - new completions can be triggered")
+        self._last_completion_triggered = False
+
+    def mark_ghost_text_change(self) -> None:
+        """Mark that the next text change is from ghost text and should be ignored."""
+        self._ignoring_next_change = True
+        logger.debug("Marked next change to be ignored (ghost text change)")
+
+    def on_text_change(self, new_content: str, cursor_position: Optional[Tuple[int, int]] = None, from_ghost_text: bool = False) -> None:
         """
         Handle text change in the editor.
 
         Args:
             new_content: The new content of the editor
             cursor_position: Optional cursor position (row, col)
+            from_ghost_text: If True, this change is from ghost text and should be ignored
         """
         # Update cursor position if provided
         if cursor_position is not None:
             self.cursor_position = cursor_position
+
+        # Ignore changes from ghost text application/removal
+        if from_ghost_text or self._ignoring_next_change:
+            logger.debug("Ignoring text change from ghost text")
+            self._ignoring_next_change = False
+            self.last_content = new_content
+            return
+
+        # User made a change - reset completion flag to allow new completions
+        if self._last_completion_triggered:
+            logger.debug("User typed after completion was triggered, resetting completion flag")
+            self._last_completion_triggered = False
+
+        # Cancel any pending idle timer
+        if self._idle_task and not self._idle_task.done():
+            logger.debug("Canceling pending idle timer")
+            self._idle_task.cancel()
 
         # Calculate the difference in character count
         char_diff = abs(len(new_content) - len(self.last_content))
@@ -119,11 +152,30 @@ class FeedHandler:
         logger.debug(f"Text changed: char_count={self.char_count}/{self.threshold}, cursor={self.cursor_position}")
 
         # Check if we've reached the threshold
-        if self.char_count >= self.threshold:
-            logger.info(f"Threshold reached ({self.char_count} >= {self.threshold}), triggering update")
-            # Trigger async update (schedule as task)
-            asyncio.create_task(self._trigger_update_async(new_content))
-            self.char_count = 0  # Reset counter
+        if self.char_count >= self.threshold and not self._last_completion_triggered:
+            logger.info(f"Threshold reached ({self.char_count} >= {self.threshold}), starting {self.idle_timeout}s idle timer")
+            # Start idle timer
+            self._idle_task = asyncio.create_task(self._wait_and_trigger(new_content))
+        elif self._last_completion_triggered:
+            logger.debug("Completion already triggered, not starting new timer")
+
+    async def _wait_and_trigger(self, document_text: str) -> None:
+        """
+        Wait for idle timeout, then trigger update if still idle.
+
+        Args:
+            document_text: The current document text content
+        """
+        try:
+            logger.debug(f"Waiting {self.idle_timeout}s for idle timeout...")
+            await asyncio.sleep(self.idle_timeout)
+            logger.info("Idle timeout elapsed, triggering update")
+            await self._trigger_update_async(document_text)
+            # Reset counter after successful trigger
+            self.char_count = 0
+        except asyncio.CancelledError:
+            logger.debug("Idle timer cancelled (user continued typing)")
+            # Don't reset counter - keep accumulating
 
     async def _trigger_update_async(self, document_text: str) -> None:
         """
@@ -188,7 +240,9 @@ class FeedHandler:
                     completion_text = completion_cards[0].text
                     logger.info(f"Setting ghost text: {completion_text[:50]}...")
                     self.text_editor.set_ghost_text(completion_text)
-                    logger.debug("Ghost text set successfully")
+                    # Mark that we've triggered a completion - don't trigger again until user interacts
+                    self._last_completion_triggered = True
+                    logger.debug("Ghost text set successfully, completion flag set")
                 else:
                     logger.error("TextEditor not set, cannot render ghost text")
             else:

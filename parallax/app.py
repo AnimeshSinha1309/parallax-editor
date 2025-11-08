@@ -288,6 +288,8 @@ File Operations:
             if editor.ghost_text_visible:
                 logger.debug("Clearing ghost text due to text change")
                 editor.clear_ghost_text()
+                # Reset completion flag - user rejected ghost text by typing
+                self.feed_handler.reset_completion_flag()
 
             # Get cursor position from text area
             cursor_pos = event.text_area.cursor_location
@@ -315,6 +317,8 @@ File Operations:
                 logger.info(f"Key '{event.key}' pressed, attempting to accept ghost text")
                 if editor.accept_ghost_text():
                     logger.info("Ghost text accepted via keyboard")
+                    # Reset completion flag - user accepted ghost text
+                    self.feed_handler.reset_completion_flag()
                     event.prevent_default()
                     event.stop()
                     return
@@ -324,4 +328,6 @@ File Operations:
             if editor.ghost_text_visible:
                 logger.info("Escape pressed, clearing ghost text")
                 editor.clear_ghost_text()
+                # Reset completion flag - user dismissed ghost text
+                self.feed_handler.reset_completion_flag()
                 # Don't prevent default - let it exit to command mode
