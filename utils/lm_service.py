@@ -11,8 +11,10 @@ import os
 import threading
 from typing import Optional
 
-import dspy
 from dotenv import load_dotenv
+
+# Local imports
+from utils.custom_lm_router import CustomLLMRouterLM
 
 # Load environment variables (e.g., during local development or CLI usage).
 load_dotenv()
@@ -27,7 +29,7 @@ LM_MODEL = os.getenv(
     os.getenv("CEREBRAS_MODEL", "openai/MBZUAI-IFM/K2-Think"),
 )
 
-_global_lm: Optional[dspy.LM] = None
+_global_lm: Optional[CustomLLMRouterLM] = None
 _global_lm_lock = threading.Lock()
 
 
@@ -35,7 +37,7 @@ def get_lm(
     api_key: Optional[str] = None,
     *,
     force_refresh: bool = False,
-) -> Optional[dspy.LM]:
+) -> Optional[CustomLLMRouterLM]:
     """Return a shared Cerebras-backed `dspy.LM` instance.
 
     Args:
@@ -55,10 +57,10 @@ def get_lm(
         if _global_lm is not None and not force_refresh:
             return _global_lm
 
-        _global_lm = dspy.LM(
-            model=LM_MODEL,
-            api_key=resolved_api_key,
+        _global_lm = CustomLLMRouterLM(
             api_base=LM_API_BASE,
+            api_key=resolved_api_key,
+            model=LM_MODEL,
             max_tokens=1000,
             temperature=0.7,
         )

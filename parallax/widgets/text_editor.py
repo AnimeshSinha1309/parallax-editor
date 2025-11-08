@@ -4,9 +4,13 @@ Text editor widget for Parallax.
 
 from pathlib import Path
 from typing import Optional
+import logging
 from textual.widgets import TextArea
 from textual.containers import Container
 from parallax.core.syntax_highlighter import SyntaxHighlighter
+from parallax.widgets.ghost_text_area import GhostTextArea
+
+logger = logging.getLogger("parallax.text_editor")
 
 
 class TextEditor(Container):
@@ -40,9 +44,13 @@ class TextEditor(Container):
         self.current_file: Optional[Path] = None
         self.current_language: str = "plain"
 
+        # TODO: Ghost text completion state
+        self.ghost_text: Optional[str] = None
+        self.ghost_text_visible: bool = False
+
     def compose(self):
-        """Compose the text editor with a TextArea widget."""
-        text_area = TextArea(
+        """Compose the text editor with a GhostTextArea widget."""
+        text_area = GhostTextArea(
             id="text-area",
             show_line_numbers=True,
             theme="monokai",
@@ -303,4 +311,85 @@ class TextEditor(Container):
             text_area.move_cursor((cursor_row, cursor_col))
             return True
         except Exception:
+            return False
+
+    # =================================================================
+    # TODO: Ghost Text Completion Methods - To be implemented
+    # =================================================================
+    #
+    # Ghost text completions show inline suggestions as greyed-out text
+    # at the cursor position. Users can accept with Tab or dismiss by
+    # continuing to type.
+    #
+    # Implementation requirements:
+    # 1. Extend TextArea or create custom rendering overlay
+    # 2. Show completion text in grey after cursor position
+    # 3. Handle Tab key to accept completion
+    # 4. Clear ghost text on any other keystroke
+    # 5. Respect cursor movement and clear if cursor moves
+    #
+    # Textual rendering approach options:
+    # - Option A: Use Rich Text overlays with custom styling
+    # - Option B: Extend TextArea's render method
+    # - Option C: Use a separate overlay widget positioned at cursor
+    #
+    # =================================================================
+
+    def set_ghost_text(self, completion: str) -> None:
+        """
+        Set the ghost text completion to display.
+
+        Args:
+            completion: The completion text to show as ghost text
+        """
+        logger.info(f"set_ghost_text called with completion: {completion[:50]}...")
+        self.ghost_text = completion
+        self.ghost_text_visible = True
+
+        # Delegate to GhostTextArea
+        try:
+            text_area = self.query_one("#text-area", GhostTextArea)
+            text_area.set_ghost_text(completion)
+            logger.debug("Ghost text delegated to GhostTextArea successfully")
+        except Exception as e:
+            logger.error(f"Error setting ghost text: {e}", exc_info=True)
+
+    def clear_ghost_text(self) -> None:
+        """Clear the current ghost text completion."""
+        logger.debug("clear_ghost_text called")
+        self.ghost_text = None
+        self.ghost_text_visible = False
+
+        # Delegate to GhostTextArea
+        try:
+            text_area = self.query_one("#text-area", GhostTextArea)
+            text_area.clear_ghost_text()
+            logger.debug("Ghost text cleared successfully")
+        except Exception as e:
+            logger.error(f"Error clearing ghost text: {e}", exc_info=True)
+
+    def accept_ghost_text(self) -> bool:
+        """
+        Accept the ghost text completion and insert it at cursor position.
+
+        Returns:
+            bool: True if ghost text was accepted, False if no ghost text
+        """
+        if not self.ghost_text or not self.ghost_text_visible:
+            logger.debug("accept_ghost_text called but no ghost text visible")
+            return False
+
+        logger.info(f"Accepting ghost text: {self.ghost_text[:50]}...")
+        try:
+            text_area = self.query_one("#text-area", GhostTextArea)
+            result = text_area.accept_ghost_text()
+
+            if result:
+                self.ghost_text = None
+                self.ghost_text_visible = False
+                logger.info("Ghost text accepted and inserted successfully")
+
+            return result
+        except Exception as e:
+            logger.error(f"Error accepting ghost text: {e}", exc_info=True)
             return False
