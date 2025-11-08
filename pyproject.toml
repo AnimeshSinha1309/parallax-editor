@@ -8,6 +8,7 @@ dependencies = [
     "dspy>=3.0.0",
     "requests>=2.31.0",
     "python-dotenv>=1.0.0",
+    "persist-cache>=0.4.4",
 ]
 
 [project.optional-dependencies]
