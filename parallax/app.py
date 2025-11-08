@@ -17,6 +17,7 @@ from parallax.core.logging_config import setup_logging, get_logger
 from fulfillers import Card, CardType
 from fulfillers.dummy import DummyFulfiller
 from fulfillers.completions import Completions
+from fulfillers.ambiguities import Ambiguities
 from utils.context import GlobalPreferenceContext
 from textual import events
 
@@ -111,16 +112,24 @@ class ParallaxApp(App):
         # Register fulfillers
         logger.info("Registering fulfillers...")
 
-        # Register Completions fulfiller (LLM-powered)
+        # Register Ambiguities fulfiller (immediate trigger after 20 characters)
+        try:
+            ambiguities_fulfiller = Ambiguities()
+            self.feed_handler.register_fulfiller(ambiguities_fulfiller, trigger_type="immediate")
+            logger.info("Ambiguities fulfiller registered successfully with immediate trigger")
+        except Exception as e:
+            logger.warning(f"Failed to register Ambiguities fulfiller: {e}")
+
+        # Register Completions fulfiller (idle trigger after timeout)
         try:
             completions_fulfiller = Completions()
-            self.feed_handler.register_fulfiller(completions_fulfiller)
-            logger.info("Completions fulfiller registered successfully")
+            self.feed_handler.register_fulfiller(completions_fulfiller, trigger_type="idle")
+            logger.info("Completions fulfiller registered successfully with idle trigger")
         except Exception as e:
             logger.warning(f"Failed to register Completions fulfiller: {e}")
             logger.info("Falling back to DummyFulfiller")
             dummy_fulfiller = DummyFulfiller()
-            self.feed_handler.register_fulfiller(dummy_fulfiller)
+            self.feed_handler.register_fulfiller(dummy_fulfiller, trigger_type="idle")
 
         # Start in command mode by default
         command_input = self.query_one("#command-input", CommandInput)
