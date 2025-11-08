@@ -1,4 +1,8 @@
+import os
+
 from parallizer.utils import get_lm
+from parallizer.utils.custom_lm_router import CustomLLMRouterLM
+from parallizer.utils.lm_service import LM_API_BASE
 from parallizer.signatures.completions_signature import InlineCompletion
 from parallizer.fulfillers.base import Fulfiller
 from shared.models import Card, CardType
@@ -9,6 +13,8 @@ import dspy
 import logging
 
 logger = logging.getLogger("parallax.completions")
+
+COMPLETIONS_LM_MODEL = "openai/qwen-3-235b-a22b-instruct-2507"
 
 
 # Create a combined metaclass to resolve the conflict between ABCMeta and dspy.Module's metaclass
@@ -23,11 +29,17 @@ class Completions(Fulfiller, dspy.Module, metaclass=CombinedMeta):
         """Initialize the Completions fulfiller with DSPy module setup."""
         super().__init__(**kwargs)
         logger.info("Initializing Completions fulfiller")
-        lm = get_lm()
-        if lm is not None:
-            logger.info("LM configured successfully")
+        self._default_lm = get_lm()
+        if self._default_lm is not None:
+            logger.info("Default LM configured successfully")
         else:
-            logger.warning("No LM available for Completions fulfiller")
+            logger.warning("No default LM available during Completions initialization")
+
+        self.completions_lm: Optional[CustomLLMRouterLM] = self._create_completions_lm(self._default_lm)
+        if self.completions_lm is not None:
+            logger.info("Completions fulfiller LM set to %s", COMPLETIONS_LM_MODEL)
+        else:
+            logger.warning("Failed to configure completions-specific LM '%s'", COMPLETIONS_LM_MODEL)
         self.predictor = dspy.Predict(InlineCompletion)
 
     async def forward(
@@ -65,10 +77,16 @@ class Completions(Fulfiller, dspy.Module, metaclass=CombinedMeta):
 
         # Generate completion using DSPy Predict module
         logger.info("Invoking DSPy predictor for completion generation")
-        result = self.predictor(
-            full_document=document_text,
-            cursor_context=cursor_context
-        )
+        completions_lm = self._get_completions_lm()
+        if completions_lm is None:
+            logger.error("Completions LM is unavailable; aborting completion generation")
+            completions_lm = get_lm() # fallback to default LM
+
+        with dspy.context(lm=completions_lm):
+            result = self.predictor(
+                full_document=document_text,
+                cursor_context=cursor_context
+            )
 
         # Convert to Card format
         cards = []
@@ -117,7 +135,47 @@ class Completions(Fulfiller, dspy.Module, metaclass=CombinedMeta):
     
     async def is_available(self) -> bool:
         """Check if completions fulfiller is available."""
-        from parallizer.utils import get_lm
-        available = get_lm() is not None
+        available = self._get_completions_lm() is not None
         logger.info(f"Completions fulfiller availability check: {available}")
         return available
+
+    def _get_completions_lm(self) -> Optional[CustomLLMRouterLM]:
+        """Return a completions-specific LM, attempting lazy reinitialization if needed."""
+        if self.completions_lm is None:
+            logger.info("Attempting to reinitialize completions-specific LM")
+            if self._default_lm is None:
+                self._default_lm = get_lm()
+            self.completions_lm = self._create_completions_lm(self._default_lm)
+        return self.completions_lm
+
+    def _create_completions_lm(
+        self,
+        default_lm: Optional[object]
+    ) -> Optional[CustomLLMRouterLM]:
+        """Create the completions-specific LM instance targeting the Qwen model."""
+        api_key = (
+            os.getenv("CEREBRAS_API_KEY")
+        )
+        if not api_key:
+            logger.warning("No API key found for configuring completions LM")
+            return None
+
+        api_base = (
+            os.getenv("CEREBRAS_API_BASE")
+        )
+
+        try:
+            return dspy.LM(
+                api_base=api_base,
+                api_key=api_key,
+                model=COMPLETIONS_LM_MODEL,
+                temperature=0.01,
+            )
+        except Exception as exc:
+            logger.error(
+                "Failed to instantiate completions LM '%s': %s",
+                COMPLETIONS_LM_MODEL,
+                exc,
+                exc_info=True
+            )
+            return None
