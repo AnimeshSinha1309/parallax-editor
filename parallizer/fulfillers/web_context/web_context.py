@@ -157,7 +157,7 @@ class WebContext(Fulfiller, dspy.Module, metaclass=CombinedMeta):
             logger.info(f"Generated {len(card_result.curated_context_cards)} context cards")
             for i, card_text in enumerate(card_result.curated_context_cards, 1):
                 card = Card(
-                    header=f"Web Context {i}",
+                    header="Web Context",
                     text=card_text,
                     type=CardType.CONTEXT,
                     metadata={

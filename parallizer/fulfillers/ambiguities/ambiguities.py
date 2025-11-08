@@ -164,7 +164,7 @@ class Ambiguities(Fulfiller, dspy.Module, metaclass=CombinedMeta):
             logger.info(f"Identified {len(ambiguity_result.output_ambiguities_questions)} ambiguities/questions")
             for i, question in enumerate(ambiguity_result.output_ambiguities_questions, 1):
                 card = Card(
-                    header=f"Question {i}",
+                    header="Question",
                     text=question,
                     type=CardType.QUESTION,
                     metadata={

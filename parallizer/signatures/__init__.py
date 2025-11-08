@@ -19,6 +19,7 @@ from .cards_refiner_signature import CardsRefiner
 from .web_query_generator import WebQueryGenerator
 from .web_query_generator import create_cached_predictor as create_cached_web_predictor
 from .question_ambiguity_signature import QuestionAmbiguityIdentifier
+from .mathjax_signature import MathJaxCompletion
 from .web_context_card_signature import WebContextCardSignature
 
 __all__ = [
@@ -33,6 +34,7 @@ __all__ = [
     "WebQueryGenerator",
     "create_cached_web_predictor",
     "QuestionAmbiguityIdentifier",
+    "MathJaxCompletion",
     "WebContextCardSignature",
 ]
 
