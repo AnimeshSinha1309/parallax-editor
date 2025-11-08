@@ -113,32 +113,32 @@ class ParallaxApp(App):
         # Register fulfillers
         logger.info("Registering fulfillers...")
 
-        # Register Ambiguities fulfiller (immediate trigger after 20 characters)
+        # Register Ambiguities fulfiller
         try:
             ambiguities_fulfiller = Ambiguities()
-            self.feed_handler.register_fulfiller(ambiguities_fulfiller, trigger_type="immediate")
-            logger.info("Ambiguities fulfiller registered successfully with immediate trigger")
+            self.feed_handler.register_fulfiller(ambiguities_fulfiller)
+            logger.info("Ambiguities fulfiller registered successfully")
         except Exception as e:
             logger.warning(f"Failed to register Ambiguities fulfiller: {e}")
 
-        # Register WebContext fulfiller (immediate trigger after 20 characters)
+        # Register WebContext fulfiller
         try:
             web_context_fulfiller = WebContext()
-            self.feed_handler.register_fulfiller(web_context_fulfiller, trigger_type="immediate")
-            logger.info("WebContext fulfiller registered successfully with immediate trigger")
+            self.feed_handler.register_fulfiller(web_context_fulfiller)
+            logger.info("WebContext fulfiller registered successfully")
         except Exception as e:
             logger.warning(f"Failed to register WebContext fulfiller: {e}")
 
-        # Register Completions fulfiller (idle trigger after timeout)
+        # Register Completions fulfiller
         try:
             completions_fulfiller = Completions()
-            self.feed_handler.register_fulfiller(completions_fulfiller, trigger_type="idle")
-            logger.info("Completions fulfiller registered successfully with idle trigger")
+            self.feed_handler.register_fulfiller(completions_fulfiller)
+            logger.info("Completions fulfiller registered successfully")
         except Exception as e:
             logger.warning(f"Failed to register Completions fulfiller: {e}")
             logger.info("Falling back to DummyFulfiller")
             dummy_fulfiller = DummyFulfiller()
-            self.feed_handler.register_fulfiller(dummy_fulfiller, trigger_type="idle")
+            self.feed_handler.register_fulfiller(dummy_fulfiller)
 
         # Start in command mode by default
         command_input = self.query_one("#command-input", CommandInput)
