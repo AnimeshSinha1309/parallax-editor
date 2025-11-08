@@ -23,7 +23,7 @@ class FeedHandler:
     Uses registered fulfillers to generate cards asynchronously.
     """
 
-    def __init__(self, threshold: int = 20, global_context: GlobalPreferenceContext = None, idle_timeout: float = 4.0, enable_refiner: bool = True, max_cards_per_type: int = 3):
+    def __init__(self, threshold: int = 20, global_context: GlobalPreferenceContext = None, idle_timeout: float = 4.0, enable_refiner: bool = False, max_cards_per_type: int = 3):
         """
         Initialize the feed handler.
 
