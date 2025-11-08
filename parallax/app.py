@@ -283,13 +283,6 @@ File Operations:
         # Only track changes in the main text editor
         if event.text_area.id == "text-area":
             logger.debug("Text area changed event received")
-            editor = self.query_one("#text-editor", TextEditor)
-            if editor.ghost_text_visible:
-                logger.debug("Clearing ghost text due to text change")
-                editor.clear_ghost_text()
-                # Reset completion flag - user rejected ghost text by typing
-                self.feed_handler.reset_completion_flag()
-
             # Get cursor position from text area
             cursor_pos = event.text_area.cursor_location
             logger.debug(f"Notifying FeedHandler of text change at cursor {cursor_pos}")
@@ -309,24 +302,4 @@ File Operations:
             return
 
         editor = self.query_one("#text-editor", TextEditor)
-
-        # Tab or Right arrow: Accept ghost text completion
-        if event.key in ["tab", "right"]:
-            if editor.ghost_text_visible:
-                logger.info(f"Key '{event.key}' pressed, attempting to accept ghost text")
-                if editor.accept_ghost_text():
-                    logger.info("Ghost text accepted via keyboard")
-                    # Reset completion flag - user accepted ghost text
-                    self.feed_handler.reset_completion_flag()
-                    event.prevent_default()
-                    event.stop()
-                    return
-
-        # Escape: Dismiss ghost text (already handled by action_exit_to_command, but also clear ghost text)
-        elif event.key == "escape":
-            if editor.ghost_text_visible:
-                logger.info("Escape pressed, clearing ghost text")
-                editor.clear_ghost_text()
-                # Reset completion flag - user dismissed ghost text
-                self.feed_handler.reset_completion_flag()
-                # Don't prevent default - let it exit to command mode
+        self.feed_handler.reset_completion_flag()

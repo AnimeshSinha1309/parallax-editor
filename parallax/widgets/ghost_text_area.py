@@ -75,11 +75,10 @@ class GhostTextArea(TextArea):
         if self.ghost_text_start_position is None or self.ghost_text_end_position is None:
             return
 
-        # TODO: Enable this back
-        # self.delete_text_range(self.ghost_text_start_position, self.ghost_text_end_position)
-        # self.ghost_text = None
-        # self.ghost_text_end_position = None
-        # self.ghost_text_start_position = None
+        self.delete(self.ghost_text_start_position, self.ghost_text_end_position)
+        self.ghost_text = None
+        self.ghost_text_end_position = None
+        self.ghost_text_start_position = None
 
     def accept_ghost_text(self) -> bool:
         """
