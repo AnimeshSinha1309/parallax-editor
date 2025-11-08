@@ -13,6 +13,7 @@ from .query_generator import create_cached_predictor as create_cached_rg_predict
 from .cards_refiner_signature import CardsRefiner
 from .web_query_generator import WebQueryGenerator
 from .web_query_generator import create_cached_predictor as create_cached_web_predictor
+from .question_ambiguity_signature import QuestionAmbiguityIdentifier
 
 __all__ = [
     "InlineCompletion",
@@ -22,5 +23,6 @@ __all__ = [
     "CardsRefiner",
     "WebQueryGenerator",
     "create_cached_web_predictor",
+    "QuestionAmbiguityIdentifier",
 ]
 
