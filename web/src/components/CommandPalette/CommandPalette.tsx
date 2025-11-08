@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useUIStore } from '../../stores/uiStore';
 import { useFeedStore } from '../../stores/feedStore';
-import { Command } from '../../types/models';
+import type { Command } from '../../types/models';
 import { Search, File, Folder, Settings, Save, X } from 'lucide-react';
 import clsx from 'clsx';
 
