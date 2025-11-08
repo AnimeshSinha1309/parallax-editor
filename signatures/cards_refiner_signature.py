@@ -23,14 +23,23 @@ class CardsRefiner(dspy.Signature):
             "fresh results that may contain updated or new information."
         )
     )
+    max_cards_per_type: str = dspy.InputField(
+        desc=(
+            "Maximum number of cards to return for each card type. Cards may have a 'type' "
+            "field in metadata indicating their category (e.g., QUESTION, CONTEXT). "
+            "If multiple types are present, limit each type to this maximum. "
+            "This ensures the UI doesn't become overwhelming with too many cards."
+        )
+    )
 
     refined_cards: str = dspy.OutputField(
         desc=(
             "JSON array of the final cards to display, ordered by perceived importance. "
             "Retain existing cards when they are semantically similar to newly proposed cards "
             "to minimize UI disruption. Include new cards that provide distinct value. "
-            "Remove cards that are no longer relevant. The count may differ from input sets. "
-            "Each card must maintain the structure: {'header': str, 'text': str, 'metadata': dict}.")
+            "Remove cards that are no longer relevant. Limit output to max_cards_per_type "
+            "for each distinct card type present. Each card must maintain the structure: "
+            "{'header': str, 'text': str, 'metadata': dict}.")
     )
 
 

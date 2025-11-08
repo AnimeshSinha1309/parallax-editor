@@ -6,5 +6,6 @@ from . import ripgrep
 from . import perplexity
 from . import query_cache
 from .lm_service import get_lm
+from .cards_refiner import CardsRefinerWrapper
 
-__all__ = ["context", "ripgrep", "perplexity", "query_cache", "get_lm"]
+__all__ = ["context", "ripgrep", "perplexity", "query_cache", "get_lm", "CardsRefinerWrapper"]
