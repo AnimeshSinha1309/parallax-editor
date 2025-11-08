@@ -7,7 +7,12 @@ context on expected agent behaviors.
 """
 
 from .completions_signature import InlineCompletion
-from .codebase_summary_signature import CodebaseSummary
+from .codebase_summary_signature import (
+    CodebaseSummary,
+    CodebaseSummaryPredictor,
+    summarize_codebase,
+    summarize_codebase_async,
+)
 from .query_generator import RGQueryGenerator
 from .query_generator import create_cached_predictor as create_cached_rg_predictor
 from .cards_refiner_signature import CardsRefiner
@@ -18,6 +23,9 @@ from .question_ambiguity_signature import QuestionAmbiguityIdentifier
 __all__ = [
     "InlineCompletion",
     "CodebaseSummary",
+    "CodebaseSummaryPredictor",
+    "summarize_codebase",
+    "summarize_codebase_async",
     "RGQueryGenerator",
     "create_cached_rg_predictor",
     "CardsRefiner",
