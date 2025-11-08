@@ -1,11 +1,11 @@
-import Editor, { OnMount } from '@monaco-editor/react';
-import { useRef, useEffect } from 'react';
+import Editor from '@monaco-editor/react';
+import { useRef } from 'react';
 import { useEditorStore } from '../../stores/editorStore';
 import { useUIStore } from '../../stores/uiStore';
-import * as monaco from 'monaco-editor';
+import type { editor } from 'monaco-editor';
 
 export function MonacoEditor() {
-  const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
+  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const {
     content,
     language,
@@ -14,17 +14,17 @@ export function MonacoEditor() {
   } = useEditorStore();
   const { focusPane, theme } = useUIStore();
 
-  const handleEditorDidMount: OnMount = (editor, monaco) => {
-    editorRef.current = editor;
+  const handleEditorDidMount = (editorInstance: editor.IStandaloneCodeEditor) => {
+    editorRef.current = editorInstance;
 
     // Track cursor position changes
-    editor.onDidChangeCursorPosition((e) => {
+    editorInstance.onDidChangeCursorPosition((e) => {
       const position = e.position;
       setCursorPosition([position.lineNumber - 1, position.column - 1]);
     });
 
     // Focus the editor initially
-    editor.focus();
+    editorInstance.focus();
   };
 
   const handleEditorChange = (value: string | undefined) => {
@@ -37,13 +37,8 @@ export function MonacoEditor() {
     focusPane('editor');
   };
 
-  // Set up Monaco editor theme
-  useEffect(() => {
-    if (editorRef.current) {
-      const monacoTheme = theme === 'dark' ? 'vs-dark' : 'vs-light';
-      monaco.editor.setTheme(monacoTheme);
-    }
-  }, [theme]);
+  // Determine Monaco theme based on UI theme
+  const monacoTheme = theme === 'dark' ? 'vs-dark' : 'vs-light';
 
   return (
     <div
@@ -54,7 +49,7 @@ export function MonacoEditor() {
         height="100%"
         language={language}
         value={content}
-        theme="vs-dark"
+        theme={monacoTheme}
         onChange={handleEditorChange}
         onMount={handleEditorDidMount}
         options={{
