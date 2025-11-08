@@ -49,10 +49,8 @@ class FeedHandler:
         self.text_editor = None
         self.feed_items: List[Card] = []
         self.suggestion_tracker = SuggestionTracker()
-        self.immediate_fulfillers: List[Fulfiller] = []  # Triggered immediately after threshold
-        self.idle_fulfillers: List[Fulfiller] = []  # Triggered after idle timeout
+        self.fulfillers: List[Fulfiller] = []  # All fulfillers triggered after idle timeout
         self._update_in_progress = False
-        self._immediate_update_in_progress = False
         self._last_completion_triggered = False
         self._idle_task: Optional[asyncio.Task] = None
         self._ignoring_next_change = False
@@ -61,27 +59,19 @@ class FeedHandler:
         self.cards_refiner = CardsRefinerWrapper(max_cards_per_type=max_cards_per_type)
         logger.debug(f"CardsRefinerWrapper initialized (enabled={enable_refiner}, max_cards_per_type={max_cards_per_type})")
 
-    def register_fulfiller(self, fulfiller: Fulfiller, trigger_type: str = "idle") -> None:
+    def register_fulfiller(self, fulfiller: Fulfiller) -> None:
         """
         Register a fulfiller to be invoked during updates.
 
         Args:
             fulfiller: A Fulfiller instance to register
-            trigger_type: "immediate" for threshold-based trigger, "idle" for idle-timeout-based trigger
         """
         fulfiller_name = fulfiller.__class__.__name__
-        logger.info(f"Registering fulfiller: {fulfiller_name} with trigger_type={trigger_type}")
+        logger.info(f"Registering fulfiller: {fulfiller_name}")
 
-        if trigger_type == "immediate":
-            self.immediate_fulfillers.append(fulfiller)
-        elif trigger_type == "idle":
-            self.idle_fulfillers.append(fulfiller)
-        else:
-            logger.error(f"Invalid trigger_type: {trigger_type}. Must be 'immediate' or 'idle'")
-            return
+        self.fulfillers.append(fulfiller)
 
-        total_fulfillers = len(self.immediate_fulfillers) + len(self.idle_fulfillers)
-        logger.debug(f"Total registered fulfillers: {total_fulfillers} (immediate={len(self.immediate_fulfillers)}, idle={len(self.idle_fulfillers)})")
+        logger.debug(f"Total registered fulfillers: {len(self.fulfillers)}")
 
     def set_ai_feed(self, ai_feed) -> None:
         """
@@ -179,21 +169,16 @@ class FeedHandler:
         if self.char_count >= self.threshold and not self._last_completion_triggered:
             logger.info(f"Threshold reached ({self.char_count} >= {self.threshold})")
 
-            # Trigger immediate fulfillers right away
-            if self.immediate_fulfillers:
-                logger.info(f"Triggering {len(self.immediate_fulfillers)} immediate fulfiller(s)")
-                asyncio.create_task(self._trigger_immediate_update_async(new_content))
-
-            # Start idle timer for idle fulfillers
-            if self.idle_fulfillers:
-                logger.info(f"Starting {self.idle_timeout}s idle timer for {len(self.idle_fulfillers)} idle fulfiller(s)")
+            # Start idle timer for all fulfillers
+            if self.fulfillers:
+                logger.info(f"Starting {self.idle_timeout}s idle timer for {len(self.fulfillers)} fulfiller(s)")
                 self._idle_task = asyncio.create_task(self._wait_and_trigger_idle(new_content))
         elif self._last_completion_triggered:
             logger.debug("Completion already triggered, not starting new timer")
 
     async def _wait_and_trigger_idle(self, document_text: str) -> None:
         """
-        Wait for idle timeout, then trigger idle fulfillers if still idle.
+        Wait for idle timeout, then trigger all fulfillers if still idle.
 
         Args:
             document_text: The current document text content
@@ -201,61 +186,39 @@ class FeedHandler:
         try:
             logger.debug(f"Waiting {self.idle_timeout}s for idle timeout...")
             await asyncio.sleep(self.idle_timeout)
-            logger.info("Idle timeout elapsed, triggering idle fulfillers")
-            await self._trigger_update_async(document_text, self.idle_fulfillers, "idle")
+            logger.info("Idle timeout elapsed, triggering fulfillers")
+            await self._trigger_update_async(document_text)
             # Reset counter after successful trigger
             self.char_count = 0
         except asyncio.CancelledError:
             logger.debug("Idle timer cancelled (user continued typing)")
             # Don't reset counter - keep accumulating
 
-    async def _trigger_immediate_update_async(self, document_text: str) -> None:
-        """
-        Trigger immediate fulfillers (threshold-based).
-
-        Args:
-            document_text: The current document text content
-        """
-        await self._trigger_update_async(document_text, self.immediate_fulfillers, "immediate")
-        # Reset counter after successful trigger
-        self.char_count = 0
-
-    async def _trigger_update_async(self, document_text: str, fulfillers: List[Fulfiller], fulfiller_type: str) -> None:
+    async def _trigger_update_async(self, document_text: str) -> None:
         """
         Trigger an async update to the AI feed and ghost text.
 
-        Invokes specified fulfillers concurrently and processes their results.
+        Invokes all registered fulfillers concurrently and processes their results.
 
         Args:
             document_text: The current document text content
-            fulfillers: List of fulfillers to invoke
-            fulfiller_type: Type of fulfillers being invoked ("immediate" or "idle")
         """
-        # Use different locks for immediate vs idle to avoid blocking each other
-        if fulfiller_type == "immediate":
-            if self._immediate_update_in_progress:
-                logger.warning("Immediate update already in progress, skipping...")
-                return
-            self._immediate_update_in_progress = True
-        else:
-            if self._update_in_progress:
-                logger.warning("Idle update already in progress, skipping...")
-                return
-            self._update_in_progress = True
-
-        if not fulfillers:
-            logger.warning(f"No {fulfiller_type} fulfillers registered, skipping update")
-            if fulfiller_type == "immediate":
-                self._immediate_update_in_progress = False
-            else:
-                self._update_in_progress = False
+        if self._update_in_progress:
+            logger.warning("Update already in progress, skipping...")
             return
 
-        logger.info(f"Starting async {fulfiller_type} update with {len(fulfillers)} fulfiller(s)")
+        self._update_in_progress = True
+
+        if not self.fulfillers:
+            logger.warning("No fulfillers registered, skipping update")
+            self._update_in_progress = False
+            return
+
+        logger.info(f"Starting async update with {len(self.fulfillers)} fulfiller(s)")
 
         try:
             # Invoke all fulfillers concurrently
-            logger.debug(f"Invoking {fulfiller_type} fulfillers with cursor_position={self.cursor_position}, global_context={self.global_context}")
+            logger.debug(f"Invoking fulfillers with cursor_position={self.cursor_position}, global_context={self.global_context}")
             tasks = [
                 fulfiller.forward(
                     document_text=document_text,
@@ -263,7 +226,7 @@ class FeedHandler:
                     global_context=self.global_context,
                     intent_label="editor_update"
                 )
-                for fulfiller in fulfillers
+                for fulfiller in self.fulfillers
             ]
 
             logger.info("Gathering results from all fulfillers...")
@@ -332,13 +295,10 @@ class FeedHandler:
                 logger.debug("No feed cards to process")
 
         except Exception as e:
-            logger.error(f"Error during {fulfiller_type} update: {e}", exc_info=True)
+            logger.error(f"Error during update: {e}", exc_info=True)
         finally:
-            if fulfiller_type == "immediate":
-                self._immediate_update_in_progress = False
-            else:
-                self._update_in_progress = False
-            logger.info(f"{fulfiller_type.capitalize()} update cycle completed")
+            self._update_in_progress = False
+            logger.info("Update cycle completed")
 
     def push_card(self, card: Card, position: Optional[int] = None) -> None:
         """

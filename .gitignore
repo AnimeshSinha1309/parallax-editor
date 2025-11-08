@@ -49,6 +49,7 @@ htmlcov/
 # Logs
 *.log
 logs/
+llm_logs/
 
 # Claude Code
 .claude/
