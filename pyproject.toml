@@ -26,3 +26,8 @@ packages = ["parallax", "parallax.widgets", "parallax.core", "parallax.config", 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+
+[dependency-groups]
+dev = [
+    "ipykernel>=7.1.0",
+]

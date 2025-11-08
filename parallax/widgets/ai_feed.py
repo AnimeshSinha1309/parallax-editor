@@ -2,12 +2,14 @@
 AI information feed widget for Parallax.
 """
 
+from typing import List
 from textual.widgets import Static, Label, Markdown
 from textual.containers import Container, VerticalScroll
 from textual.message import Message
 from textual import events
 from parallax.config.ai_config import get_ai_feed_config
 from parallax.core.link_handler import LinkHandler
+from fulfillers import Card
 
 
 class InfoBox(Container):
@@ -126,23 +128,24 @@ class AIFeed(Container):
                     content=box_config["content"]
                 )
 
-    def update_content(self, new_config: list[dict[str, str]]) -> None:
+    def update_content(self, new_cards: List[Card]) -> None:
         """
         Update the AI feed with new content.
 
         Args:
-            new_config: List of dictionaries with 'header' and 'content' keys
+            new_cards: List of Card objects to display
         """
-        self.config = new_config
+        # Store cards and convert to legacy config format for compatibility
+        self.config = [{"header": card.header, "content": card.text} for card in new_cards]
 
         # Remove existing boxes and add new ones
         scroll = self.query_one("#ai-scroll", VerticalScroll)
         scroll.remove_children()
 
-        for box_config in self.config:
+        for card in new_cards:
             scroll.mount(InfoBox(
-                header=box_config["header"],
-                content=box_config["content"]
+                header=card.header,
+                content=card.text
             ))
 
     def add_info_box(self, header: str, content: str) -> None:

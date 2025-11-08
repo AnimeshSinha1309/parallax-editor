@@ -2,10 +2,15 @@
 Feed handler for dynamic updates based on editor activity.
 """
 
+import asyncio
 import random
-from typing import Optional
+import logging
+from typing import Optional, List, Tuple
 from textual.widgets import TextArea
 from parallax.core.suggestion_tracker import SuggestionTracker
+from fulfillers import Fulfiller, Card, CardType
+
+logger = logging.getLogger("parallax.feed_handler")
 
 
 class FeedHandler:
@@ -13,21 +18,46 @@ class FeedHandler:
     Handles dynamic updates to the AI feed based on editor activity.
 
     Tracks character changes and triggers updates after a specified threshold.
+    Uses registered fulfillers to generate cards asynchronously.
     """
 
-    def __init__(self, threshold: int = 20):
+    def __init__(self, threshold: int = 20, scope_root: str = ".", idle_timeout: float = 4.0):
         """
         Initialize the feed handler.
 
         Args:
             threshold: Number of characters to type before triggering an update
+            scope_root: Root directory path for the scope
+            idle_timeout: Time in seconds to wait after last keystroke before triggering completion
         """
+        logger.info(f"Initializing FeedHandler with threshold={threshold}, scope_root={scope_root}, idle_timeout={idle_timeout}s")
         self.threshold = threshold
+        self.idle_timeout = idle_timeout
         self.char_count = 0
         self.last_content = ""
+        self.cursor_position: Tuple[int, int] = (0, 0)
+        self.scope_root = scope_root
         self.ai_feed = None
-        self.feed_items: list[dict[str, str]] = []
+        self.text_editor = None
+        self.feed_items: List[Card] = []
         self.suggestion_tracker = SuggestionTracker()
+        self.fulfillers: List[Fulfiller] = []
+        self._update_in_progress = False
+        self._last_completion_triggered = False
+        self._idle_task: Optional[asyncio.Task] = None
+        self._ignoring_next_change = False
+
+    def register_fulfiller(self, fulfiller: Fulfiller) -> None:
+        """
+        Register a fulfiller to be invoked during updates.
+
+        Args:
+            fulfiller: A Fulfiller instance to register
+        """
+        fulfiller_name = fulfiller.__class__.__name__
+        logger.info(f"Registering fulfiller: {fulfiller_name}")
+        self.fulfillers.append(fulfiller)
+        logger.debug(f"Total registered fulfillers: {len(self.fulfillers)}")
 
     def set_ai_feed(self, ai_feed) -> None:
         """
@@ -37,131 +67,233 @@ class FeedHandler:
             ai_feed: The AIFeed widget instance
         """
         self.ai_feed = ai_feed
-        # Initialize with current feed items
-        self.feed_items = list(ai_feed.config)
+        # Initialize with current feed items (convert from old format if needed)
+        if hasattr(ai_feed, 'config') and ai_feed.config:
+            # Convert old dict format to Card objects if necessary
+            for item in ai_feed.config:
+                if isinstance(item, dict):
+                    # Legacy format conversion - assume CONTEXT type
+                    card = Card(
+                        header=item.get("header", ""),
+                        text=item.get("content", ""),
+                        type=CardType.CONTEXT,
+                        metadata={"source": "legacy"}
+                    )
+                    self.feed_items.append(card)
+                elif isinstance(item, Card):
+                    self.feed_items.append(item)
 
-    def on_text_change(self, new_content: str) -> None:
+    def set_text_editor(self, text_editor) -> None:
+        """
+        Set the text editor widget for ghost text completions.
+
+        TODO: This is needed for ghost text implementation.
+        Currently stores the reference but ghost text rendering is not yet implemented.
+
+        Args:
+            text_editor: The TextEditor widget instance
+        """
+        self.text_editor = text_editor
+
+    def update_cursor_position(self, position: Tuple[int, int]) -> None:
+        """
+        Update the current cursor position.
+
+        Args:
+            position: (row, col) tuple of cursor position
+        """
+        self.cursor_position = position
+
+    def reset_completion_flag(self) -> None:
+        """Reset the completion triggered flag, allowing new completions to be requested."""
+        logger.debug("Resetting completion flag - new completions can be triggered")
+        self._last_completion_triggered = False
+
+    def mark_ghost_text_change(self) -> None:
+        """Mark that the next text change is from ghost text and should be ignored."""
+        self._ignoring_next_change = True
+        logger.debug("Marked next change to be ignored (ghost text change)")
+
+    def on_text_change(self, new_content: str, cursor_position: Optional[Tuple[int, int]] = None, from_ghost_text: bool = False) -> None:
         """
         Handle text change in the editor.
 
         Args:
             new_content: The new content of the editor
+            cursor_position: Optional cursor position (row, col)
+            from_ghost_text: If True, this change is from ghost text and should be ignored
         """
+        # Update cursor position if provided
+        if cursor_position is not None:
+            self.cursor_position = cursor_position
+
+        # Ignore changes from ghost text application/removal
+        if from_ghost_text or self._ignoring_next_change:
+            logger.debug("Ignoring text change from ghost text")
+            self._ignoring_next_change = False
+            self.last_content = new_content
+            return
+
+        # User made a change - reset completion flag to allow new completions
+        if self._last_completion_triggered:
+            logger.debug("User typed after completion was triggered, resetting completion flag")
+            self._last_completion_triggered = False
+
+        # Cancel any pending idle timer
+        if self._idle_task and not self._idle_task.done():
+            logger.debug("Canceling pending idle timer")
+            self._idle_task.cancel()
+
         # Calculate the difference in character count
         char_diff = abs(len(new_content) - len(self.last_content))
         self.char_count += char_diff
         self.last_content = new_content
 
+        logger.debug(f"Text changed: char_count={self.char_count}/{self.threshold}, cursor={self.cursor_position}")
+
         # Check if we've reached the threshold
-        if self.char_count >= self.threshold:
-            self._trigger_update()
-            self.char_count = 0  # Reset counter
+        if self.char_count >= self.threshold and not self._last_completion_triggered:
+            logger.info(f"Threshold reached ({self.char_count} >= {self.threshold}), starting {self.idle_timeout}s idle timer")
+            # Start idle timer
+            self._idle_task = asyncio.create_task(self._wait_and_trigger(new_content))
+        elif self._last_completion_triggered:
+            logger.debug("Completion already triggered, not starting new timer")
 
-    def _trigger_update(self) -> None:
+    async def _wait_and_trigger(self, document_text: str) -> None:
         """
-        Trigger an update to the AI feed.
-
-        Deletes an arbitrary old item and adds a new item at a different location.
-        """
-        if self.ai_feed is None:
-            return
-
-        # Delete an arbitrary old item (if there are items to delete)
-        if len(self.feed_items) > 0:
-            # Pick a random item to delete
-            delete_index = random.randint(0, len(self.feed_items) - 1)
-            deleted_item = self.feed_items.pop(delete_index)
-            print(f"[FeedHandler] Deleted item at index {delete_index}: {deleted_item['header']}")
-
-        # Add a new item at a random position
-        new_item = self._generate_new_item()
-
-        # Insert at a random position (or at the end if feed is empty)
-        if len(self.feed_items) > 0:
-            insert_index = random.randint(0, len(self.feed_items))
-        else:
-            insert_index = 0
-
-        self.feed_items.insert(insert_index, new_item)
-        print(f"[FeedHandler] Added new item at index {insert_index}: {new_item['header']}")
-
-        # Update the AI feed widget
-        self.ai_feed.update_content(self.feed_items)
-
-    def _generate_new_item(self) -> dict[str, str]:
-        """
-        Generate a new feed item.
-
-        Returns:
-            dict: A dictionary with 'header' and 'content' keys
-        """
-        # For now, generate simple placeholder content
-        # In the future, this could be replaced with LLM-generated suggestions
-        all_suggestions = [
-            {
-                "header": "Code Suggestion",
-                "content": "Consider adding type hints to improve code clarity and catch type-related bugs early."
-            },
-            {
-                "header": "Refactoring Tip",
-                "content": "This function is getting long. Consider breaking it into smaller, more focused functions."
-            },
-            {
-                "header": "Best Practice",
-                "content": "Add docstrings to your functions to improve code documentation and maintainability."
-            },
-            {
-                "header": "Performance Tip",
-                "content": "Consider using list comprehensions instead of loops for better performance and readability."
-            },
-            {
-                "header": "Style Guide",
-                "content": "Follow PEP 8 conventions for consistent code formatting across your project."
-            },
-            {
-                "header": "Testing Reminder",
-                "content": "Don't forget to write unit tests for this new functionality!"
-            },
-            {
-                "header": "Security Note",
-                "content": "Be cautious with user input. Always validate and sanitize data before processing."
-            },
-            {
-                "header": "Code Review",
-                "content": "Review your error handling. Ensure all edge cases are covered appropriately."
-            },
-        ]
-
-        # Filter out deleted suggestions
-        available_suggestions = [
-            s for s in all_suggestions
-            if not self.suggestion_tracker.is_deleted(s["header"], s["content"])
-        ]
-
-        # If all suggestions are deleted, return a fallback
-        if not available_suggestions:
-            return {
-                "header": "AI Assistant",
-                "content": "Keep coding! You're doing great."
-            }
-
-        return random.choice(available_suggestions)
-
-    def push_item(self, header: str, content: str, position: Optional[int] = None) -> None:
-        """
-        Manually push a new item to the feed.
+        Wait for idle timeout, then trigger update if still idle.
 
         Args:
-            header: The header text for the new item
-            content: The content text for the new item
+            document_text: The current document text content
+        """
+        try:
+            logger.debug(f"Waiting {self.idle_timeout}s for idle timeout...")
+            await asyncio.sleep(self.idle_timeout)
+            logger.info("Idle timeout elapsed, triggering update")
+            await self._trigger_update_async(document_text)
+            # Reset counter after successful trigger
+            self.char_count = 0
+        except asyncio.CancelledError:
+            logger.debug("Idle timer cancelled (user continued typing)")
+            # Don't reset counter - keep accumulating
+
+    async def _trigger_update_async(self, document_text: str) -> None:
+        """
+        Trigger an async update to the AI feed and ghost text.
+
+        Invokes all registered fulfillers concurrently and processes their results.
+
+        Args:
+            document_text: The current document text content
+        """
+        if self._update_in_progress:
+            logger.warning("Update already in progress, skipping...")
+            return
+
+        if not self.fulfillers:
+            logger.warning("No fulfillers registered, skipping update")
+            return
+
+        logger.info(f"Starting async update with {len(self.fulfillers)} fulfiller(s)")
+        self._update_in_progress = True
+
+        try:
+            # Invoke all fulfillers concurrently
+            logger.debug(f"Invoking fulfillers with cursor_position={self.cursor_position}, scope_root={self.scope_root}")
+            tasks = [
+                fulfiller.invoke(
+                    document_text=document_text,
+                    cursor_position=self.cursor_position,
+                    scope_root=self.scope_root,
+                    intent_label="editor_update"
+                )
+                for fulfiller in self.fulfillers
+            ]
+
+            logger.info("Gathering results from all fulfillers...")
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            logger.info(f"Received {len(results)} results from fulfillers")
+
+            # Flatten all cards from all fulfillers
+            all_cards: List[Card] = []
+            for i, result in enumerate(results):
+                if isinstance(result, Exception):
+                    logger.error(f"Fulfiller {i} error: {result}", exc_info=result)
+                    continue
+                if isinstance(result, list):
+                    logger.debug(f"Fulfiller {i} returned {len(result)} card(s)")
+                    all_cards.extend(result)
+
+            logger.info(f"Total cards received: {len(all_cards)}")
+
+            # Separate cards by type
+            completion_cards = [c for c in all_cards if c.type == CardType.COMPLETION]
+            feed_cards = [c for c in all_cards if c.type in (CardType.QUESTION, CardType.CONTEXT)]
+
+            logger.info(f"Separated cards: {len(completion_cards)} COMPLETION, {len(feed_cards)} QUESTION/CONTEXT")
+
+            # Handle ghost text completions
+            if completion_cards:
+                logger.info(f"Processing {len(completion_cards)} completion card(s) for ghost text")
+                if self.text_editor:
+                    # Use the first completion card
+                    completion_text = completion_cards[0].text
+                    logger.info(f"Setting ghost text: {completion_text[:50]}...")
+                    self.text_editor.set_ghost_text(completion_text)
+                    # Mark that we've triggered a completion - don't trigger again until user interacts
+                    self._last_completion_triggered = True
+                    logger.debug("Ghost text set successfully, completion flag set")
+                else:
+                    logger.error("TextEditor not set, cannot render ghost text")
+            else:
+                logger.debug("No completion cards received")
+
+            # Handle feed cards - update the sidebar
+            if feed_cards:
+                logger.info(f"Processing {len(feed_cards)} feed card(s) for sidebar")
+                # Delete an arbitrary old item (if there are items to delete)
+                if len(self.feed_items) > 0:
+                    delete_index = random.randint(0, len(self.feed_items) - 1)
+                    deleted_item = self.feed_items.pop(delete_index)
+                    logger.debug(f"Deleted feed item at index {delete_index}: {deleted_item.header}")
+
+                # Add new cards at random positions
+                for card in feed_cards:
+                    if len(self.feed_items) > 0:
+                        insert_index = random.randint(0, len(self.feed_items))
+                    else:
+                        insert_index = 0
+
+                    self.feed_items.insert(insert_index, card)
+                    logger.debug(f"Added feed item at index {insert_index}: {card.header}")
+
+                # Update the AI feed widget
+                if self.ai_feed:
+                    logger.debug("Updating AI feed widget")
+                    self.ai_feed.update_content(self.feed_items)
+                else:
+                    logger.warning("AI feed not set, cannot update sidebar")
+            else:
+                logger.debug("No feed cards to process")
+
+        except Exception as e:
+            logger.error(f"Error during update: {e}", exc_info=True)
+        finally:
+            self._update_in_progress = False
+            logger.info("Update cycle completed")
+
+    def push_card(self, card: Card, position: Optional[int] = None) -> None:
+        """
+        Manually push a new card to the feed.
+
+        Args:
+            card: The Card object to add
             position: Optional position to insert at (default: end of feed)
         """
-        new_item = {"header": header, "content": content}
-
         if position is None or position >= len(self.feed_items):
-            self.feed_items.append(new_item)
+            self.feed_items.append(card)
         else:
-            self.feed_items.insert(position, new_item)
+            self.feed_items.insert(position, card)
 
         if self.ai_feed:
             self.ai_feed.update_content(self.feed_items)
