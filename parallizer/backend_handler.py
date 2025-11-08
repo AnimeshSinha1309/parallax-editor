@@ -22,6 +22,7 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
+import dspy
 
 from shared.models import Card, CardType
 from shared.context import GlobalPreferenceContext
@@ -30,6 +31,7 @@ from parallizer.fulfillers.completions.completions import Completions
 from parallizer.fulfillers.ambiguities.ambiguities import Ambiguities
 from parallizer.fulfillers.web_context.web_context import WebContext
 from parallizer.fulfillers.codesearch.search import CodeSearch
+from parallizer.utils import get_lm
 
 # Configure logging
 logging.basicConfig(
@@ -37,6 +39,15 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger("parallizer.backend")
+
+# Configure DSPy at module level (before any async contexts)
+# This ensures the LM is available in all async tasks
+_lm = get_lm()
+if _lm:
+    dspy.configure(lm=_lm)
+    logger.info("DSPy configured at module level")
+else:
+    logger.warning("No LM available at module level - fulfillers requiring LM may not work")
 
 # FastAPI app
 app = FastAPI(title="Parallizer Backend", version="0.2.0")
@@ -113,6 +124,9 @@ def initialize_fulfillers():
     logger.info("Initializing fulfillers...")
 
     try:
+        # DSPy is already configured at module level, so we can proceed directly
+        # to initializing fulfillers
+
         # Initialize each fulfiller
         completions = Completions()
         logger.info("Completions fulfiller initialized")
