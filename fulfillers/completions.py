@@ -1,5 +1,5 @@
 from utils import get_lm
-from signatures.completions_singnature import InlineCompletion
+from signatures.completions_signature import InlineCompletion
 from fulfillers.base import Fulfiller
 from fulfillers.models import Card
 from typing import List, Tuple, Optional
