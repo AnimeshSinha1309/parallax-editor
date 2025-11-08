@@ -7,7 +7,6 @@ from textual.widgets import Static, Label, Markdown
 from textual.containers import Container, VerticalScroll
 from textual.message import Message
 from textual import events
-from parallax.config.ai_config import get_ai_feed_config
 from parallax.core.link_handler import LinkHandler
 from fulfillers import Card
 
@@ -109,7 +108,7 @@ class AIFeed(Container):
             **kwargs: Additional keyword arguments for Container
         """
         super().__init__(**kwargs)
-        self.config = get_ai_feed_config()
+        self.config = []  # Start with empty feed
         self.selected_index = 0
         self.can_focus = True
         self.root_path = root_path
