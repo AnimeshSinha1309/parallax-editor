@@ -8,6 +8,7 @@ reused across the codebase without reinitializing the underlying client.
 from __future__ import annotations
 
 import os
+import dspy
 import threading
 from typing import Optional
 
@@ -48,7 +49,7 @@ def get_lm(
         A singleton `dspy.LM` instance or ``None`` if no API key is available.
     """
 
-    resolved_api_key = api_key or os.getenv("K2_API_KEY")
+    resolved_api_key = api_key or os.getenv("K2_API_KEY") or os.getenv("CEREBRAS_API_KEY")
     if not resolved_api_key:
         return None
 
@@ -57,13 +58,21 @@ def get_lm(
         if _global_lm is not None and not force_refresh:
             return _global_lm
 
-        _global_lm = CustomLLMRouterLM(
-            api_base=LM_API_BASE,
-            api_key=resolved_api_key,
-            model=LM_MODEL,
-            max_tokens=1000,
-            temperature=0.7,
-        )
+        if "K2" in LM_MODEL:
+            _global_lm = CustomLLMRouterLM(
+                api_base=LM_API_BASE,
+                api_key=resolved_api_key,
+                model=LM_MODEL,
+                max_tokens=1000,
+                temperature=0.01,
+            )
+        else:
+            _global_lm = dspy.LM(
+                model=LM_MODEL,
+                api_key=resolved_api_key,
+                api_base=LM_API_BASE,
+                temperature=0.01
+            )
 
         return _global_lm
 
