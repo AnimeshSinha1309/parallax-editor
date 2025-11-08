@@ -6,6 +6,7 @@ from typing import Optional
 import logging
 from textual.widgets import TextArea
 from rich.text import Text
+from rich.style import Style
 import copy
 
 logger = logging.getLogger("parallax.ghost_text_area")
@@ -34,14 +35,38 @@ class GhostTextArea(TextArea):
             completion: The completion text to show as ghost text
         """
         logger.info(f"GhostTextArea.set_ghost_text called: {completion[:50] if completion else 'None'}...")
-        if completion != self.ghost_text:
-            self.clear_ghost_text()
-            self.ghost_text = completion
         
+        # TODO: Consider if we should do this
+        # if completion != self.ghost_text:
+        #     self.clear_ghost_text()
+        if self.ghost_text is not None:
+            return  # Only one completion can be shown at a time
+
+        self.ghost_text = completion
         self.ghost_text_start_position = copy.copy(self.cursor_location)
         self.insert(self.ghost_text)
         self.ghost_text_end_position = copy.copy(self.cursor_location)
-        # self.get_text_range(self.ghost_text_start_position, self.ghost_text_end_position).style = "dim"
+
+        start_row, start_col = self.ghost_text_start_position
+        end_row, end_col = self.ghost_text_end_position
+        logger.info(f"Styling ghost text from {start_row}, {start_col} to {end_row}, {end_col}")
+        for line_idx in range(start_row, end_row + 1):
+            line_text: Text = self.get_line(line_idx)
+            line_length = len(line_text)
+            if start_row == end_row:
+                logger.info(f"Styling single line from {start_col} to {end_col}")
+                line_text.stylize("bold magenta", start_col, end_col) 
+            elif line_idx == start_row:
+                line_text.stylize("bold magenta", start_col, line_length)
+            elif line_idx == end_row:
+                line_text.stylize("bold magenta", 0, end_col)
+            else:
+                line_text.stylize("bold magenta", 0, line_length)
+
+            if hasattr(self, "_line_cache"):
+                self._line_cache.clear()
+            self.refresh_lines(start_row, end_row - start_row + 1)
+
         self.move_cursor(self.ghost_text_start_position)
 
     def clear_ghost_text(self) -> None:
@@ -50,7 +75,8 @@ class GhostTextArea(TextArea):
         if self.ghost_text_start_position is None or self.ghost_text_end_position is None:
             return
 
-        # self.delete(self.ghost_text_start_position, self.ghost_text_end_position)
+        # TODO: Enable this back
+        # self.delete_text_range(self.ghost_text_start_position, self.ghost_text_end_position)
         # self.ghost_text = None
         # self.ghost_text_end_position = None
         # self.ghost_text_start_position = None
@@ -71,7 +97,14 @@ class GhostTextArea(TextArea):
     def _on_key(self, event) -> None:
         """Handle key events to manage ghost text."""
         # Clear ghost text on most keystrokes (except Tab, Right, Escape which are handled in ParallaxApp)
-        # if self.ghost_text is not None and event.key not in ["tab", "right", "escape"]:
-            # logger.debug(f"Key '{event.key}' pressed, clearing ghost text")
-            # self.clear_ghost_text()
+        if self.ghost_text is not None:
+            logger.info(f"Key '{event.key}' pressed, responding with ghost text _on_key")
+            if event.key == "right":
+                self.accept_ghost_text()
+                event.prevent_default()
+                event.stop()
+            elif event.key == "escape":
+                self.clear_ghost_text()
+            else:
+                self.clear_ghost_text()
         return super()._on_key(event)

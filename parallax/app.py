@@ -283,7 +283,6 @@ File Operations:
         # Only track changes in the main text editor
         if event.text_area.id == "text-area":
             logger.debug("Text area changed event received")
-            # Clear ghost text when user types (any change)
             editor = self.query_one("#text-editor", TextEditor)
             if editor.ghost_text_visible:
                 logger.debug("Clearing ghost text due to text change")
