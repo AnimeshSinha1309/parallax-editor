@@ -10,9 +10,11 @@ class QuestionAmbiguityIdentifier(dspy.Signature):
 
     relevant_code_context: str = dspy.InputField(
         desc=(
-            "Relevant code snippets, file structures, or implementation details "
-            "from the codebase that relate to the current plan. This provides "
-            "the technical context needed to evaluate the plan's feasibility and clarity."
+            "Formatted search results from the codebase showing relevant code snippets, "
+            "file structures, or implementation details that relate to the current plan. "
+            "This is typically the output of SearchResult.to_formatted_string() containing "
+            "matched code with context lines. This provides the technical context needed "
+            "to evaluate the plan's feasibility and clarity."
         )
     )
     current_plan: str = dspy.InputField(

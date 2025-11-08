@@ -2,38 +2,77 @@
 
 import asyncio
 import json
-from dataclasses import dataclass, field
 from typing import List, Optional
+from pydantic import BaseModel, Field
 
 
-@dataclass
-class SearchMatch:
+class SearchMatch(BaseModel):
     """A single match from code search."""
 
-    file_path: str  # Path to file (relative to search dir)
-    line_number: int  # Line number (1-indexed)
-    line_content: str  # The matching line content
-    context_before: List[str] = field(default_factory=list)  # Lines before match
-    context_after: List[str] = field(default_factory=list)  # Lines after match
+    file_path: str = Field(description="Path to file (relative to search dir)")
+    line_number: int = Field(description="Line number (1-indexed)")
+    line_content: str = Field(description="The matching line content")
+    context_before: List[str] = Field(default_factory=list, description="Lines before match")
+    context_after: List[str] = Field(default_factory=list, description="Lines after match")
 
     def __str__(self) -> str:
         """Format as file:line for display."""
         return f"{self.file_path}:{self.line_number}"
 
 
-@dataclass
-class SearchResult:
+class SearchResult(BaseModel):
     """Complete search result."""
 
-    matches: List[SearchMatch]
-    total_matches: int
-    query: str
-    error: Optional[str] = None
+    matches: List[SearchMatch] = Field(description="List of search matches")
+    total_matches: int = Field(description="Total number of matches")
+    query: str = Field(description="The search query used")
+    error: Optional[str] = Field(default=None, description="Error message if search failed")
 
     @property
     def success(self) -> bool:
         """True if search completed without errors."""
         return self.error is None
+
+    def to_json(self) -> str:
+        """Serialize to JSON string."""
+        return self.model_dump_json(indent=2)
+
+    @classmethod
+    def from_json(cls, json_str: str) -> "SearchResult":
+        """Deserialize from JSON string."""
+        return cls.model_validate_json(json_str)
+
+    def to_formatted_string(self) -> str:
+        """
+        Convert to a human-readable formatted string for LLM consumption.
+
+        Returns a structured text representation of the search results.
+        """
+        if not self.success:
+            return f"Search Error: {self.error}\nQuery: {self.query}"
+
+        if not self.matches:
+            return f"No matches found for query: {self.query}"
+
+        lines = [f"Search Results for: {self.query}"]
+        lines.append(f"Total matches: {self.total_matches}\n")
+
+        for i, match in enumerate(self.matches, 1):
+            lines.append(f"Match {i}: {match.file_path}:{match.line_number}")
+
+            if match.context_before:
+                for line in match.context_before:
+                    lines.append(f"  {line}")
+
+            lines.append(f"> {match.line_content}")
+
+            if match.context_after:
+                for line in match.context_after:
+                    lines.append(f"  {line}")
+
+            lines.append("")  # Empty line between matches
+
+        return "\n".join(lines)
 
 
 class RipgrepSearch:
