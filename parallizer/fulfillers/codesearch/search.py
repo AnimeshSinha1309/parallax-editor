@@ -79,12 +79,7 @@ class CodeSearch(Fulfiller):
         # Use intent_label or 'query' kwarg as the search query
         query = kwargs.get('query', intent_label)
         if not query:
-            return [Card(
-                header="No Query",
-                text="No search query provided",
-                type=CardType.CONTEXT,
-                metadata={"error": "missing_query"}
-            )]
+            return []
 
         # Perform the search
         result = await self.search(
@@ -109,12 +104,7 @@ class CodeSearch(Fulfiller):
             )]
 
         if not result.matches:
-            return [Card(
-                header="No Results",
-                text=f"No matches found for: {result.query}",
-                type=CardType.CONTEXT,
-                metadata={"query": result.query, "total_matches": 0}
-            )]
+            return []
 
         cards = []
         for match in result.matches:
