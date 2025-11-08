@@ -5,13 +5,18 @@ Feed handler for dynamic updates based on editor activity.
 import asyncio
 import random
 import logging
-from typing import Optional, List, Tuple
+import os
+from typing import Optional, List, Tuple, Dict, Any
 from textual.widgets import TextArea
+import httpx
 from parallax.core.suggestion_tracker import SuggestionTracker
-from fulfillers import Fulfiller, Card, CardType
-from utils.context import GlobalPreferenceContext
+from shared.models import Card, CardType
+from shared.context import GlobalPreferenceContext
 
 logger = logging.getLogger("parallax.feed_handler")
+
+# Backend server configuration
+PARALLIZER_URL = os.getenv("PARALLIZER_URL", "http://localhost:8000")
 
 
 class FeedHandler:
@@ -22,7 +27,7 @@ class FeedHandler:
     Uses registered fulfillers to generate cards asynchronously.
     """
 
-    def __init__(self, threshold: int = 20, global_context: GlobalPreferenceContext = None, idle_timeout: float = 4.0):
+    def __init__(self, threshold: int = 20, global_context: GlobalPreferenceContext = None, idle_timeout: float = 4.0, user_id: str = "default_user"):
         """
         Initialize the feed handler.
 
@@ -30,41 +35,46 @@ class FeedHandler:
             threshold: Number of characters to type before triggering an update
             global_context: Global preference context containing scope root and plan path
             idle_timeout: Time in seconds to wait after last keystroke before triggering completion
+            user_id: User identifier for backend session management
         """
         # Use default context if none provided
         if global_context is None:
             global_context = GlobalPreferenceContext(scope_root=".", plan_path=None)
 
-        logger.info(f"Initializing FeedHandler with threshold={threshold}, scope_root={global_context.scope_root}, plan_path={global_context.plan_path}, idle_timeout={idle_timeout}s")
+        logger.info(f"Initializing FeedHandler with threshold={threshold}, scope_root={global_context.scope_root}, plan_path={global_context.plan_path}, idle_timeout={idle_timeout}s, user_id={user_id}")
+        logger.info(f"Backend server URL: {PARALLIZER_URL}")
         self.threshold = threshold
         self.idle_timeout = idle_timeout
         self.char_count = 0
         self.last_content = ""
         self.cursor_position: Tuple[int, int] = (0, 0)
         self.global_context = global_context
+        self.user_id = user_id
         self.ai_feed = None
         self.text_editor = None
         self.feed_items: List[Card] = []
         self.suggestion_tracker = SuggestionTracker()
-        self.fulfillers: List[Fulfiller] = []  # All fulfillers triggered after idle timeout
         self._update_in_progress = False
         self._last_completion_triggered = False
         self._idle_task: Optional[asyncio.Task] = None
         self._ignoring_next_change = False
+        self._last_successful_cards: List[Card] = []  # Cache last successful response for retry
+        self._http_client = httpx.AsyncClient(timeout=30.0)
+        self._polling_task: Optional[asyncio.Task] = None  # Background polling task
+        self._stop_polling = False  # Flag to stop polling
 
-    def register_fulfiller(self, fulfiller: Fulfiller) -> None:
+    def register_fulfiller(self, fulfiller) -> None:
         """
-        Register a fulfiller to be invoked during updates.
+        Legacy method for fulfiller registration (now handled by backend).
+
+        This method is kept for backward compatibility but does nothing,
+        as fulfillers are now managed by the Parallizer backend server.
 
         Args:
-            fulfiller: A Fulfiller instance to register
+            fulfiller: A Fulfiller instance (ignored)
         """
-        fulfiller_name = fulfiller.__class__.__name__
-        logger.info(f"Registering fulfiller: {fulfiller_name}")
-
-        self.fulfillers.append(fulfiller)
-
-        logger.debug(f"Total registered fulfillers: {len(self.fulfillers)}")
+        fulfiller_name = fulfiller.__class__.__name__ if hasattr(fulfiller, '__class__') else str(fulfiller)
+        logger.info(f"Ignoring fulfiller registration for '{fulfiller_name}' - fulfillers are now managed by backend")
 
     def set_ai_feed(self, ai_feed) -> None:
         """
@@ -160,12 +170,11 @@ class FeedHandler:
 
         # Check if we've reached the threshold
         if self.char_count >= self.threshold and not self._last_completion_triggered:
-            logger.info(f"Threshold reached ({self.char_count} >= {self.threshold})")
+            logger.debug(f"Threshold reached ({self.char_count} >= {self.threshold})")
 
-            # Start idle timer for all fulfillers
-            if self.fulfillers:
-                logger.info(f"Starting {self.idle_timeout}s idle timer for {len(self.fulfillers)} fulfiller(s)")
-                self._idle_task = asyncio.create_task(self._wait_and_trigger_idle(new_content))
+            # Start idle timer to trigger backend request
+            logger.debug(f"Starting {self.idle_timeout}s idle timer for backend request")
+            self._idle_task = asyncio.create_task(self._wait_and_trigger_idle(new_content))
         elif self._last_completion_triggered:
             logger.debug("Completion already triggered, not starting new timer")
 
@@ -187,11 +196,181 @@ class FeedHandler:
             logger.debug("Idle timer cancelled (user continued typing)")
             # Don't reset counter - keep accumulating
 
+    async def _call_backend(self, document_text: str) -> Optional[List[Card]]:
+        """
+        Call the Parallizer backend to get cards.
+
+        Triggers background processing and starts polling if needed.
+
+        Args:
+            document_text: The current document text content
+
+        Returns:
+            List of Card objects, or None if the request failed
+        """
+        try:
+            logger.info(f"Calling backend at {PARALLIZER_URL}/fulfill")
+
+            # Prepare request payload
+            payload = {
+                "user_id": self.user_id,
+                "document_text": document_text,
+                "cursor_position": list(self.cursor_position),
+                "global_context": {
+                    "scope_root": self.global_context.scope_root,
+                    "plan_path": self.global_context.plan_path
+                }
+            }
+
+            # Make HTTP request with timeout
+            response = await self._http_client.post(
+                f"{PARALLIZER_URL}/fulfill",
+                json=payload,
+                timeout=10.0  # 10 second timeout for initial response
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                processing = data.get("processing", False)
+
+                cards = []
+                # Convert JSON response to Card objects
+                for card_data in data.get("cards", []):
+                    card = Card(
+                        header=card_data["header"],
+                        text=card_data["text"],
+                        type=CardType(card_data["type"]),
+                        metadata=card_data.get("metadata", {})
+                    )
+                    cards.append(card)
+
+                logger.info(f"Backend returned {len(cards)} cards (processing={processing})")
+
+                # Start polling if backend is still processing
+                if processing:
+                    logger.info("Backend is processing in background, starting polling...")
+                    self._start_polling()
+
+                return cards
+            else:
+                logger.error(f"Backend request failed with status {response.status_code}: {response.text}")
+                return None
+
+        except (httpx.TimeoutException, httpx.ConnectError) as e:
+            logger.warning(f"Backend request timed out or failed to connect: {e}")
+            # Start polling to get cached results
+            logger.info("Starting polling to get cached results...")
+            self._start_polling()
+            return None
+        except Exception as e:
+            logger.error(f"Error calling backend: {e}", exc_info=True)
+            return None
+
+    def _start_polling(self):
+        """Start polling the /cached endpoint for updates"""
+        # Cancel existing polling task if any
+        if self._polling_task and not self._polling_task.done():
+            logger.debug("Cancelling existing polling task")
+            self._polling_task.cancel()
+
+        # Start new polling task
+        self._stop_polling = False
+        self._polling_task = asyncio.create_task(self._poll_cached())
+        logger.info("Started polling task")
+
+    async def _poll_cached(self):
+        """
+        Poll the /cached endpoint every 3 seconds for incremental updates.
+        Continues until backend signals processing is complete.
+        """
+        logger.info(f"Starting to poll cached endpoint for user {self.user_id}")
+        poll_count = 0
+
+        try:
+            while not self._stop_polling:
+                try:
+                    poll_count += 1
+                    logger.debug(f"Polling cached endpoint (attempt {poll_count})...")
+
+                    # Request cached data
+                    response = await self._http_client.get(
+                        f"{PARALLIZER_URL}/cached/{self.user_id}",
+                        timeout=5.0
+                    )
+
+                    if response.status_code == 200:
+                        data = response.json()
+                        processing = data.get("processing", False)
+                        last_updated = data.get("last_updated", 0)
+
+                        # Convert cards
+                        cards = []
+                        for card_data in data.get("cards", []):
+                            card = Card(
+                                header=card_data["header"],
+                                text=card_data["text"],
+                                type=CardType(card_data["type"]),
+                                metadata=card_data.get("metadata", {})
+                            )
+                            cards.append(card)
+
+                        logger.debug(f"Cached endpoint returned {len(cards)} cards (processing={processing})")
+
+                        # Always update UI with cards from server (replaces entire feed)
+                        # This ensures UI stays in sync with server's cache
+                        self._update_ui_with_cards(cards)
+
+                        # Stop polling if backend finished processing
+                        if not processing:
+                            logger.info("Backend finished processing, stopping polling")
+                            break
+
+                    else:
+                        logger.warning(f"Cached request failed with status {response.status_code}")
+
+                except asyncio.CancelledError:
+                    logger.debug("Polling task cancelled")
+                    raise
+                except Exception as e:
+                    logger.error(f"Error in polling iteration: {e}")
+
+                # Wait 3 seconds before next poll
+                await asyncio.sleep(3.0)
+
+        except asyncio.CancelledError:
+            logger.info("Polling cancelled")
+        finally:
+            logger.info(f"Stopped polling after {poll_count} attempts")
+
+    def _update_ui_with_cards(self, cards: List[Card]):
+        """
+        Update UI with new cards from backend.
+        Replaces current feed_items and updates widgets.
+        """
+        # Replace feed items
+        self.feed_items = cards
+
+        # Separate by type
+        completion_cards = [c for c in cards if c.type == CardType.COMPLETION]
+        feed_cards = [c for c in cards if c.type in (CardType.QUESTION, CardType.CONTEXT)]
+
+        # Update ghost text if we have completions
+        if completion_cards and self.text_editor:
+            completion_text = completion_cards[0].text
+            logger.debug(f"Updating ghost text: {completion_text[:50]}...")
+            self.text_editor.set_ghost_text(completion_text)
+            self._last_completion_triggered = True
+
+        # Always update AI feed with current feed cards (may be empty to clear the feed)
+        if self.ai_feed:
+            logger.debug(f"Updating AI feed with {len(feed_cards)} cards")
+            self.ai_feed.update_content(feed_cards)
+
     async def _trigger_update_async(self, document_text: str) -> None:
         """
         Trigger an async update to the AI feed and ghost text.
 
-        Invokes all registered fulfillers concurrently and processes their results.
+        Makes HTTP request to backend server to get cards.
 
         Args:
             document_text: The current document text content
@@ -202,100 +381,30 @@ class FeedHandler:
 
         self._update_in_progress = True
 
-        if not self.fulfillers:
-            logger.warning("No fulfillers registered, skipping update")
-            self._update_in_progress = False
-            return
-
-        logger.info(f"Starting async update with {len(self.fulfillers)} fulfiller(s)")
+        logger.info("Starting async update via backend server")
 
         try:
-            # Invoke all fulfillers concurrently
-            logger.debug(f"Invoking fulfillers with cursor_position={self.cursor_position}, global_context={self.global_context}")
-            tasks = [
-                fulfiller.forward(
-                    document_text=document_text,
-                    cursor_position=self.cursor_position,
-                    global_context=self.global_context,
-                    intent_label="editor_update"
-                )
-                for fulfiller in self.fulfillers
-            ]
+            # Call backend to get cards
+            all_cards = await self._call_backend(document_text)
 
-            logger.info("Gathering results from all fulfillers...")
-            results = await asyncio.gather(*tasks, return_exceptions=True)
-            logger.info(f"Received {len(results)} results from fulfillers")
+            # If backend call failed, use last successful cards (retry logic)
+            if all_cards is None:
+                logger.warning("Backend call failed, using last successful cards")
+                all_cards = self._last_successful_cards
+            else:
+                # Cache successful response
+                self._last_successful_cards = all_cards
 
-            # Flatten all cards from all fulfillers
-            all_cards: List[Card] = []
-            for i, result in enumerate(results):
-                if isinstance(result, Exception):
-                    logger.error(f"Fulfiller {i} error: {result}", exc_info=result)
-                    continue
-                if isinstance(result, list):
-                    logger.debug(f"Fulfiller {i} returned {len(result)} card(s)")
-                    all_cards.extend(result)
+            if not all_cards:
+                logger.info("No cards to process")
+                self._update_in_progress = False
+                return
 
             logger.info(f"Total cards received: {len(all_cards)}")
 
-            # Separate cards by type
-            completion_cards = [c for c in all_cards if c.type == CardType.COMPLETION]
-            feed_cards = [c for c in all_cards if c.type in (CardType.QUESTION, CardType.CONTEXT)]
-
-            logger.info(f"Separated cards: {len(completion_cards)} COMPLETION, {len(feed_cards)} QUESTION/CONTEXT")
-
-            # Handle ghost text completions
-            if completion_cards:
-                logger.info(f"Processing {len(completion_cards)} completion card(s) for ghost text")
-                if self.text_editor:
-                    # Use the first completion card
-                    completion_text = completion_cards[0].text
-                    logger.info(f"Setting ghost text: {completion_text[:50]}...")
-                    self.text_editor.set_ghost_text(completion_text)
-                    # Mark that we've triggered a completion - don't trigger again until user interacts
-                    self._last_completion_triggered = True
-                    logger.debug("Ghost text set successfully, completion flag set")
-                else:
-                    logger.error("TextEditor not set, cannot render ghost text")
-            else:
-                logger.debug("No completion cards received")
-
-            # Handle feed cards - update the sidebar
-            if feed_cards:
-                logger.info(f"Processing {len(feed_cards)} feed card(s) for sidebar")
-
-                # Add new cards, enforcing max 3 cards per type
-                for card in feed_cards:
-                    # Count existing cards of this type
-                    same_type_cards = [c for c in self.feed_items if c.type == card.type]
-
-                    # If we already have 3 or more cards of this type, remove the oldest ones
-                    while len(same_type_cards) >= 3:
-                        # Find and remove the oldest card of this type (first occurrence)
-                        for i, existing_card in enumerate(self.feed_items):
-                            if existing_card.type == card.type:
-                                removed_card = self.feed_items.pop(i)
-                                logger.debug(f"Removed oldest card of type {card.type} at index {i}: {removed_card.header}")
-                                same_type_cards.pop(0)
-                                break
-
-                    # Add the new card at a random position
-                    if len(self.feed_items) > 0:
-                        insert_index = random.randint(0, len(self.feed_items))
-                    else:
-                        insert_index = 0
-
-                    self.feed_items.insert(insert_index, card)
-                    logger.debug(f"Added feed item at index {insert_index}: {card.header} (type: {card.type})")
-
-                # Update the AI feed widget
-                if self.ai_feed:
-                    logger.debug("Updating AI feed widget")
-                    self.ai_feed.update_content(self.feed_items)
-                else:
-                    logger.warning("AI feed not set, cannot update sidebar")
-            else:
-                logger.debug("No feed cards to process")
+            # Backend manages card ordering and limits, so just replace the entire feed
+            # This ensures consistency with polling updates from /cached endpoint
+            self._update_ui_with_cards(all_cards)
 
         except Exception as e:
             logger.error(f"Error during update: {e}", exc_info=True)

@@ -3,9 +3,9 @@
 from typing import Optional, List, Tuple, Any
 
 from ..base import Fulfiller
-from ..models import Card, CardType
-from utils.context import GlobalPreferenceContext
-from utils.ripgrep import RipgrepSearch, SearchResult, SearchMatch
+from shared.models import Card, CardType
+from shared.context import GlobalPreferenceContext
+from parallizer.utils.ripgrep import RipgrepSearch, SearchResult, SearchMatch
 
 
 class CodeSearch(Fulfiller):

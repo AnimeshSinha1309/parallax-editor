@@ -1,12 +1,12 @@
 """Ambiguities fulfiller for generating context-aware search queries."""
 
-from utils import get_lm
-from signatures.rg_query_generator import RGQueryGenerator
-from signatures.question_ambiguity_signature import QuestionAmbiguityIdentifier
-from fulfillers.base import Fulfiller
-from fulfillers.models import Card, CardType
-from utils.context import GlobalPreferenceContext
-from utils.ripgrep import RipgrepSearch, SearchResult
+from parallizer.utils import get_lm
+from parallizer.signatures.rg_query_generator import RGQueryGenerator
+from parallizer.signatures.question_ambiguity_signature import QuestionAmbiguityIdentifier
+from parallizer.fulfillers.base import Fulfiller
+from shared.models import Card, CardType
+from shared.context import GlobalPreferenceContext
+from parallizer.utils.ripgrep import RipgrepSearch, SearchResult
 from typing import List, Tuple, Optional
 from abc import ABCMeta
 from pathlib import Path
@@ -14,8 +14,6 @@ import dspy
 import logging
 
 logger = logging.getLogger("parallax.ambiguities")
-
-dspy.configure(lm=get_lm())
 
 
 # Create a combined metaclass to resolve the conflict between ABCMeta and dspy.Module's metaclass
@@ -41,7 +39,6 @@ class Ambiguities(Fulfiller, dspy.Module, metaclass=CombinedMeta):
         lm = get_lm()
         if lm is not None:
             logger.info("LM configured successfully")
-            dspy.configure(lm=lm)
         else:
             logger.warning("No LM available for Ambiguities fulfiller")
         self.query_generator = dspy.Predict(RGQueryGenerator)
@@ -94,26 +91,43 @@ class Ambiguities(Fulfiller, dspy.Module, metaclass=CombinedMeta):
 
         logger.info(f"Generated {len(query_result.queries)} queries: {query_result.queries}")
 
-        # Perform searches for each query and collect all results
-        all_search_results: List[SearchResult] = []
-        for query in query_result.queries:
-            logger.info(f"Executing search for query: {query}")
-
-            # Perform the async search
-            search_result: SearchResult = await self.search_backend.search(
+        # Perform searches in parallel for all queries
+        logger.info("Executing all code searches in parallel...")
+        search_tasks = [
+            self.search_backend.search(
                 query=query,
                 directory=global_context.scope_root,
                 max_results=10,  # Limit results per query
                 context_lines=2,
                 case_sensitive=False
             )
+            for query in query_result.queries
+        ]
 
-            # Log the search result
-            logger.info(f"Search result for '{query}': success={search_result.success}, total_matches={search_result.total_matches}")
-            if search_result.error:
-                logger.warning(f"Search error: {search_result.error}")
+        # Execute all searches concurrently
+        import asyncio
+        search_results = await asyncio.gather(*search_tasks, return_exceptions=True)
 
-            all_search_results.append(search_result)
+        # Process results and filter out exceptions
+        all_search_results: List[SearchResult] = []
+        for i, result in enumerate(search_results):
+            query = query_result.queries[i]
+
+            if isinstance(result, Exception):
+                logger.error(f"Search failed for query '{query}': {result}")
+                # Create failed search result
+                all_search_results.append(SearchResult(
+                    success=False,
+                    query=query,
+                    total_matches=0,
+                    matches=[],
+                    error=str(result)
+                ))
+            else:
+                logger.info(f"Search result for '{query}': success={result.success}, total_matches={result.total_matches}")
+                if result.error:
+                    logger.warning(f"Search error: {result.error}")
+                all_search_results.append(result)
 
         # Combine all search results into a formatted string
         combined_context = self._combine_search_results(all_search_results)
@@ -218,7 +232,7 @@ class Ambiguities(Fulfiller, dspy.Module, metaclass=CombinedMeta):
 
     async def is_available(self) -> bool:
         """Check if ambiguities fulfiller is available."""
-        from utils import get_lm
+        from parallizer.utils import get_lm
         lm_available = get_lm() is not None
         ripgrep_available = await self.search_backend.is_available()
         available = lm_available and ripgrep_available

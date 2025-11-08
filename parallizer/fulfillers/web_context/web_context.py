@@ -1,12 +1,12 @@
 """WebContext fulfiller for generating web-based context and insights."""
 
-from utils import get_lm
-from signatures.web_query_generator import WebQueryGenerator
-from signatures.web_context_card_signature import WebContextCardSignature
-from fulfillers.base import Fulfiller
-from fulfillers.models import Card, CardType
-from utils.context import GlobalPreferenceContext
-from utils.perplexity import PerplexitySearch, SearchResponse
+from parallizer.utils import get_lm
+from parallizer.signatures.web_query_generator import WebQueryGenerator
+from parallizer.signatures.web_context_card_signature import WebContextCardSignature
+from parallizer.fulfillers.base import Fulfiller
+from shared.models import Card, CardType
+from shared.context import GlobalPreferenceContext
+from parallizer.utils.perplexity import PerplexitySearch, SearchResponse
 from typing import List, Tuple, Optional
 from abc import ABCMeta
 from pathlib import Path
@@ -14,8 +14,6 @@ import dspy
 import logging
 
 logger = logging.getLogger("parallax.web_context")
-
-dspy.configure(lm=get_lm())
 
 
 # Create a combined metaclass to resolve the conflict between ABCMeta and dspy.Module's metaclass
@@ -41,7 +39,6 @@ class WebContext(Fulfiller, dspy.Module, metaclass=CombinedMeta):
         lm = get_lm()
         if lm is not None:
             logger.info("LM configured successfully")
-            dspy.configure(lm=lm)
         else:
             logger.warning("No LM available for WebContext fulfiller")
         self.query_generator = dspy.Predict(WebQueryGenerator)
@@ -90,24 +87,40 @@ class WebContext(Fulfiller, dspy.Module, metaclass=CombinedMeta):
 
         logger.info(f"Generated {len(query_result.queries)} queries: {query_result.queries}")
 
-        # Perform searches for each query and collect all results
-        all_search_responses: List[SearchResponse] = []
-        for query in query_result.queries:
-            logger.info(f"Executing web search for query: {query}")
-
-            # Perform the search
-            search_response: SearchResponse = self.search_backend.search(
+        # Perform searches in parallel for all queries
+        logger.info("Executing all web searches in parallel...")
+        search_tasks = [
+            self.search_backend.search(
                 query=query,
                 max_tokens=1024,
                 temperature=0.2
             )
+            for query in query_result.queries
+        ]
 
-            # Log the search result
-            logger.info(f"Search result for '{query}': success={search_response.success}")
-            if search_response.error:
-                logger.warning(f"Search error: {search_response.error}")
+        # Execute all searches concurrently
+        import asyncio
+        search_results = await asyncio.gather(*search_tasks, return_exceptions=True)
 
-            all_search_responses.append(search_response)
+        # Process results and filter out exceptions
+        all_search_responses: List[SearchResponse] = []
+        for i, result in enumerate(search_results):
+            query = query_result.queries[i]
+
+            if isinstance(result, Exception):
+                logger.error(f"Search failed for query '{query}': {result}")
+                # Create failed response
+                all_search_responses.append(SearchResponse(
+                    success=False,
+                    content="",
+                    citations=[],
+                    error=str(result)
+                ))
+            else:
+                logger.info(f"Search result for '{query}': success={result.success}")
+                if result.error:
+                    logger.warning(f"Search error: {result.error}")
+                all_search_responses.append(result)
 
         # Combine all search results into citation list format
         combined_context = self._combine_search_results(all_search_responses)
@@ -186,9 +199,9 @@ class WebContext(Fulfiller, dspy.Module, metaclass=CombinedMeta):
 
     async def is_available(self) -> bool:
         """Check if web context fulfiller is available."""
-        from utils import get_lm
+        from parallizer.utils import get_lm
         lm_available = get_lm() is not None
-        perplexity_available = self.search_backend.is_available()
+        perplexity_available = await self.search_backend.is_available()
         available = lm_available and perplexity_available
         logger.info(f"WebContext fulfiller availability check: LM={lm_available}, Perplexity={perplexity_available}, overall={available}")
         return available

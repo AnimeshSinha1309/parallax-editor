@@ -1,0 +1,18 @@
+# Parallizer Backend Server Dependencies
+
+# FastAPI and server
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+pydantic>=2.0.0
+
+# Core dependencies
+dspy>=3.0.0
+requests>=2.31.0
+aiohttp>=3.9.0
+python-dotenv>=1.0.0
+persist-cache>=0.4.4
+
+# Development dependencies
+pytest>=8.0.0
+pytest-asyncio>=0.23.0
+httpx>=0.26.0  # For testing FastAPI

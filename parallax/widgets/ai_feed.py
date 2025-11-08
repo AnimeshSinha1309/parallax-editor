@@ -8,7 +8,7 @@ from textual.containers import Container, VerticalScroll
 from textual.message import Message
 from textual import events
 from parallax.core.link_handler import LinkHandler
-from fulfillers import Card
+from shared.models import Card
 
 
 class InfoBox(Container):

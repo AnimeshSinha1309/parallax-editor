@@ -3,8 +3,8 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional, Tuple
 
-from .models import Card
-from utils.context import GlobalPreferenceContext
+from shared.models import Card
+from shared.context import GlobalPreferenceContext
 
 
 class Fulfiller(ABC):

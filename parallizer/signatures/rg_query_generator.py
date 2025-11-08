@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import dspy
-from utils.query_cache import cached_predictor, get_rg_query_cache
+from parallizer.utils.query_cache import cached_predictor, get_rg_query_cache
 
 
 class RGQueryGenerator(dspy.Signature):

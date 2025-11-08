@@ -4,9 +4,9 @@ import random
 import logging
 from typing import List, Tuple, Any, Optional
 
-from fulfillers.base import Fulfiller
-from fulfillers.models import Card, CardType
-from utils.context import GlobalPreferenceContext
+from parallizer.fulfillers.base import Fulfiller
+from shared.models import Card, CardType
+from shared.context import GlobalPreferenceContext
 
 logger = logging.getLogger("parallax.dummy_fulfiller")
 
