@@ -1,4 +1,4 @@
-"""Test script for the generic Fulfiller invoke method."""
+"""Test script for the generic Fulfiller forward method."""
 
 import asyncio
 import sys
@@ -9,11 +9,12 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from fulfillers import Fulfiller, Card
 from fulfillers.codesearch import CodeSearch
+from utils.context import GlobalPreferenceContext
 
 
-async def test_invoke_basic():
-    """Test basic invoke functionality."""
-    print("Test 1: Basic invoke with query")
+async def test_forward_basic():
+    """Test basic forward functionality."""
+    print("Test 1: Basic forward with query")
     try:
         search = CodeSearch()
 
@@ -21,16 +22,17 @@ async def test_invoke_basic():
         assert isinstance(search, Fulfiller), "CodeSearch should be a Fulfiller"
         print("✓ CodeSearch is a Fulfiller")
 
-        # Test invoke method
-        cards = await search.invoke(
+        # Test forward method
+        global_context = GlobalPreferenceContext(scope_root="../fulfillers")
+        cards = await search.forward(
             document_text="# This is a sample file\ndef main():\n    pass",
             cursor_position=(2, 4),
-            scope_root="../fulfillers",
+            global_context=global_context,
             intent_label="class",
         )
 
-        assert isinstance(cards, list), "invoke should return a list"
-        print(f"✓ invoke returned {len(cards)} cards")
+        assert isinstance(cards, list), "forward should return a list"
+        print(f"✓ forward returned {len(cards)} cards")
 
         if cards:
             assert all(isinstance(card, Card) for card in cards), "All items should be Card objects"
@@ -48,21 +50,22 @@ async def test_invoke_basic():
         raise
 
 
-async def test_invoke_with_kwargs():
-    """Test invoke with additional kwargs."""
-    print("\n\nTest 2: Invoke with custom parameters")
+async def test_forward_with_kwargs():
+    """Test forward with additional kwargs."""
+    print("\n\nTest 2: Forward with custom parameters")
     try:
         search = CodeSearch(max_results=5)
 
-        cards = await search.invoke(
+        global_context = GlobalPreferenceContext(scope_root="../fulfillers")
+        cards = await search.forward(
             document_text="",
             cursor_position=(0, 0),
-            scope_root="../fulfillers",
+            global_context=global_context,
             intent_label="def",
             max_results=3,  # Override default
         )
 
-        print(f"✓ invoke with max_results=3 returned {len(cards)} cards")
+        print(f"✓ forward with max_results=3 returned {len(cards)} cards")
         assert len(cards) <= 3, "Should respect max_results"
 
     except Exception as e:
@@ -70,17 +73,18 @@ async def test_invoke_with_kwargs():
         raise
 
 
-async def test_invoke_error_handling():
-    """Test invoke error handling."""
+async def test_forward_error_handling():
+    """Test forward error handling."""
     print("\n\nTest 3: Error handling")
     try:
         search = CodeSearch()
 
         # Invalid regex should return error card
-        cards = await search.invoke(
+        global_context = GlobalPreferenceContext(scope_root="../fulfillers")
+        cards = await search.forward(
             document_text="",
             cursor_position=(0, 0),
-            scope_root="../fulfillers",
+            global_context=global_context,
             intent_label="[invalid(",
         )
 
@@ -93,16 +97,17 @@ async def test_invoke_error_handling():
         raise
 
 
-async def test_invoke_no_results():
-    """Test invoke with no matches."""
+async def test_forward_no_results():
+    """Test forward with no matches."""
     print("\n\nTest 4: No results handling")
     try:
         search = CodeSearch()
 
-        cards = await search.invoke(
+        global_context = GlobalPreferenceContext(scope_root="../fulfillers")
+        cards = await search.forward(
             document_text="",
             cursor_position=(0, 0),
-            scope_root="../fulfillers",
+            global_context=global_context,
             intent_label="xyzabc123impossible",
         )
 
@@ -116,7 +121,7 @@ async def test_invoke_no_results():
 
 
 async def main():
-    print("Testing Fulfiller invoke() Implementation")
+    print("Testing Fulfiller forward() Implementation")
     print("=" * 50)
 
     # Check if ripgrep is available
@@ -125,13 +130,13 @@ async def main():
         print("✗ ripgrep is not installed or not in PATH")
         return
 
-    await test_invoke_basic()
-    await test_invoke_with_kwargs()
-    await test_invoke_error_handling()
-    await test_invoke_no_results()
+    await test_forward_basic()
+    await test_forward_with_kwargs()
+    await test_forward_error_handling()
+    await test_forward_no_results()
 
     print("\n" + "=" * 50)
-    print("All invoke tests completed!")
+    print("All forward tests completed!")
 
 
 if __name__ == "__main__":

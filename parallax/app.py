@@ -17,6 +17,8 @@ from parallax.core.logging_config import setup_logging, get_logger
 from fulfillers import Card, CardType
 from fulfillers.dummy import DummyFulfiller
 from fulfillers.completions import Completions
+from fulfillers.ambiguities import Ambiguities
+from utils.context import GlobalPreferenceContext
 from textual import events
 
 logger = get_logger("parallax.app")
@@ -53,23 +55,29 @@ class ParallaxApp(App):
         ("escape", "exit_to_command", "Command mode"),
     ]
 
-    def __init__(self, root_path: str = ".", **kwargs):
+    def __init__(self, global_context: GlobalPreferenceContext = None, **kwargs):
         """
         Initialize the Parallax application.
 
         Args:
-            root_path: The root directory for the file explorer
+            global_context: Global preference context containing scope root and plan path
             **kwargs: Additional keyword arguments for App
         """
         # Set up logging before anything else
         setup_logging(log_level="INFO")
-        logger.info(f"Initializing Parallax application with root_path={root_path}")
+
+        # Use default context if none provided
+        if global_context is None:
+            global_context = GlobalPreferenceContext(scope_root=".", plan_path=None)
+
+        logger.info(f"Initializing Parallax application with scope_root={global_context.scope_root}, plan_path={global_context.plan_path}")
 
         super().__init__(**kwargs)
-        self.root_path = root_path
+        self.global_context = global_context
+        self.root_path = global_context.scope_root  # For backwards compatibility with widgets
         self.command_handler = CommandHandler()
         self.yankboard = ""  # For yank/paste operations
-        self.feed_handler = FeedHandler(threshold=20, scope_root=root_path)  # Trigger every 20 characters
+        self.feed_handler = FeedHandler(threshold=20, global_context=global_context)  # Trigger every 20 characters
         logger.debug("FeedHandler initialized")
 
     def compose(self) -> ComposeResult:
@@ -104,16 +112,24 @@ class ParallaxApp(App):
         # Register fulfillers
         logger.info("Registering fulfillers...")
 
-        # Register Completions fulfiller (LLM-powered)
+        # Register Ambiguities fulfiller (immediate trigger after 20 characters)
+        try:
+            ambiguities_fulfiller = Ambiguities()
+            self.feed_handler.register_fulfiller(ambiguities_fulfiller, trigger_type="immediate")
+            logger.info("Ambiguities fulfiller registered successfully with immediate trigger")
+        except Exception as e:
+            logger.warning(f"Failed to register Ambiguities fulfiller: {e}")
+
+        # Register Completions fulfiller (idle trigger after timeout)
         try:
             completions_fulfiller = Completions()
-            self.feed_handler.register_fulfiller(completions_fulfiller)
-            logger.info("Completions fulfiller registered successfully")
+            self.feed_handler.register_fulfiller(completions_fulfiller, trigger_type="idle")
+            logger.info("Completions fulfiller registered successfully with idle trigger")
         except Exception as e:
             logger.warning(f"Failed to register Completions fulfiller: {e}")
             logger.info("Falling back to DummyFulfiller")
             dummy_fulfiller = DummyFulfiller()
-            self.feed_handler.register_fulfiller(dummy_fulfiller)
+            self.feed_handler.register_fulfiller(dummy_fulfiller, trigger_type="idle")
 
         # Start in command mode by default
         command_input = self.query_one("#command-input", CommandInput)

@@ -2,40 +2,77 @@
 
 import asyncio
 import json
-from dataclasses import dataclass, field
 from typing import List, Optional
+from pydantic import BaseModel, Field
 
-from .context import PreferenceContext
 
-
-@dataclass
-class SearchMatch:
+class SearchMatch(BaseModel):
     """A single match from code search."""
 
-    file_path: str  # Path to file (relative to search dir)
-    line_number: int  # Line number (1-indexed)
-    line_content: str  # The matching line content
-    context_before: List[str] = field(default_factory=list)  # Lines before match
-    context_after: List[str] = field(default_factory=list)  # Lines after match
+    file_path: str = Field(description="Path to file (relative to search dir)")
+    line_number: int = Field(description="Line number (1-indexed)")
+    line_content: str = Field(description="The matching line content")
+    context_before: List[str] = Field(default_factory=list, description="Lines before match")
+    context_after: List[str] = Field(default_factory=list, description="Lines after match")
 
     def __str__(self) -> str:
         """Format as file:line for display."""
         return f"{self.file_path}:{self.line_number}"
 
 
-@dataclass
-class SearchResult:
+class SearchResult(BaseModel):
     """Complete search result."""
 
-    matches: List[SearchMatch]
-    total_matches: int
-    query: str
-    error: Optional[str] = None
+    matches: List[SearchMatch] = Field(description="List of search matches")
+    total_matches: int = Field(description="Total number of matches")
+    query: str = Field(description="The search query used")
+    error: Optional[str] = Field(default=None, description="Error message if search failed")
 
     @property
     def success(self) -> bool:
         """True if search completed without errors."""
         return self.error is None
+
+    def to_json(self) -> str:
+        """Serialize to JSON string."""
+        return self.model_dump_json(indent=2)
+
+    @classmethod
+    def from_json(cls, json_str: str) -> "SearchResult":
+        """Deserialize from JSON string."""
+        return cls.model_validate_json(json_str)
+
+    def to_formatted_string(self) -> str:
+        """
+        Convert to a human-readable formatted string for LLM consumption.
+
+        Returns a structured text representation of the search results.
+        """
+        if not self.success:
+            return f"Search Error: {self.error}\nQuery: {self.query}"
+
+        if not self.matches:
+            return f"No matches found for query: {self.query}"
+
+        lines = [f"Search Results for: {self.query}"]
+        lines.append(f"Total matches: {self.total_matches}\n")
+
+        for i, match in enumerate(self.matches, 1):
+            lines.append(f"Match {i}: {match.file_path}:{match.line_number}")
+
+            if match.context_before:
+                for line in match.context_before:
+                    lines.append(f"  {line}")
+
+            lines.append(f"> {match.line_content}")
+
+            if match.context_after:
+                for line in match.context_after:
+                    lines.append(f"  {line}")
+
+            lines.append("")  # Empty line between matches
+
+        return "\n".join(lines)
 
 
 class RipgrepSearch:
@@ -50,15 +87,9 @@ class RipgrepSearch:
         - Must be in PATH
     """
 
-    def __init__(self, context: Optional[PreferenceContext] = None):
-        """
-        Initialize RipgrepSearch with an optional context.
-
-        Args:
-            context: PreferenceContext defining which directories/files to search.
-                    If None, a new context will be created when needed.
-        """
-        self.context = context
+    def __init__(self):
+        """Initialize RipgrepSearch."""
+        pass
 
     async def search(
         self,
@@ -73,7 +104,7 @@ class RipgrepSearch:
 
         Args:
             query: Regex pattern to search for
-            directory: Directory to search in. If None, uses paths from context.
+            directory: Directory to search in. If None, uses current directory.
             max_results: Maximum total matches to return (default 50)
             context_lines: Lines of context before/after match (default 2)
             case_sensitive: Whether search is case-sensitive (default False)
@@ -84,21 +115,10 @@ class RipgrepSearch:
         try:
             # Determine search paths
             if directory is not None:
-                # Use provided directory (backwards compatible)
                 search_paths = [directory]
             else:
-                # Use context paths
-                if self.context is None:
-                    self.context = PreferenceContext()
-                try:
-                    search_paths = [str(p) for p in self.context.get_paths()]
-                except Exception as e:
-                    return SearchResult(
-                        matches=[],
-                        total_matches=0,
-                        query=query,
-                        error=f"Context error: {str(e)}",
-                    )
+                # Default to current directory
+                search_paths = ["."]
 
             # Build ripgrep command
             cmd = self._build_command(

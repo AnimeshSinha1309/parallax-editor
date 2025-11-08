@@ -4,8 +4,8 @@ from typing import Optional, List, Tuple, Any
 
 from ..base import Fulfiller
 from ..models import Card, CardType
+from utils.context import GlobalPreferenceContext
 from utils.ripgrep import RipgrepSearch, SearchResult, SearchMatch
-from utils.context import PreferenceContext
 
 
 class CodeSearch(Fulfiller):
@@ -20,14 +20,8 @@ class CodeSearch(Fulfiller):
         search = CodeSearch()
         result = await search.search("def.*retry", "/path/to/code")
 
-        # Search using context (auto-discovers git repo)
+        # Search in current directory
         search = CodeSearch()
-        result = await search.search("def.*retry")
-
-        # Search with custom context
-        context = PreferenceContext()
-        context.add_path("/path/to/code")
-        search = CodeSearch(context=context)
         result = await search.search("def.*retry")
 
         for match in result.matches:
@@ -36,43 +30,40 @@ class CodeSearch(Fulfiller):
 
     def __init__(
         self,
-        context: Optional[PreferenceContext] = None,
         max_results: int = 50,
         context_lines: int = 2,
         case_sensitive: bool = False,
     ):
         """
-        Initialize CodeSearch with an optional context and default search parameters.
+        Initialize CodeSearch with default search parameters.
 
         Args:
-            context: PreferenceContext defining which directories/files to search.
-                    If None, context will be auto-created when needed.
             max_results: Default maximum matches to return (default 50)
             context_lines: Default lines of context before/after match (default 2)
             case_sensitive: Default case sensitivity (default False)
         """
-        self.backend = RipgrepSearch(context=context)
+        self.backend = RipgrepSearch()
         self.default_max_results = max_results
         self.default_context_lines = context_lines
         self.default_case_sensitive = case_sensitive
 
-    async def invoke(
+    async def forward(
         self,
-        text_buffer: str,
+        document_text: str,
         cursor_position: Tuple[int, int],
-        query_intent: str,
-        context: Optional[Any] = None,
+        global_context: GlobalPreferenceContext,
+        intent_label: Optional[str] = None,
         **kwargs
     ) -> List[Card]:
         """
         Invoke code search fulfiller.
 
         Args:
-            text_buffer: All text in the current file (currently unused)
-            cursor_position: Cursor position (currently unused)
-            query_intent: The search query/pattern to look for
-            context: Optional directory path to search in
-            **kwargs: Additional search parameters (max_results, context_lines, case_sensitive)
+            document_text: The entire text content of the current document (currently unused)
+            cursor_position: (line, column) position of the cursor (currently unused)
+            global_context: Global preference context containing scope root and plan path
+            intent_label: Optional search query/pattern to look for
+            **kwargs: Additional search parameters (max_results, context_lines, case_sensitive, query)
 
         Returns:
             List of Card objects with search results
@@ -81,11 +72,23 @@ class CodeSearch(Fulfiller):
         max_results = kwargs.get('max_results', self.default_max_results)
         context_lines = kwargs.get('context_lines', self.default_context_lines)
         case_sensitive = kwargs.get('case_sensitive', self.default_case_sensitive)
-        directory = kwargs.get('directory', context)
+
+        # Use scope_root from global_context as the directory to search
+        directory = kwargs.get('directory', global_context.scope_root)
+
+        # Use intent_label or 'query' kwarg as the search query
+        query = kwargs.get('query', intent_label)
+        if not query:
+            return [Card(
+                header="No Query",
+                text="No search query provided",
+                type=CardType.CONTEXT,
+                metadata={"error": "missing_query"}
+            )]
 
         # Perform the search
         result = await self.search(
-            query=query_intent,
+            query=query,
             directory=directory,
             max_results=max_results,
             context_lines=context_lines,
