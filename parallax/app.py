@@ -14,11 +14,8 @@ from parallax.widgets.command_input import CommandInput
 from parallax.core.command_handler import CommandHandler
 from parallax.core.feed_handler import FeedHandler
 from parallax.core.logging_config import setup_logging, get_logger
-from fulfillers import Card, CardType
-from fulfillers.completions import Completions
-from fulfillers.ambiguities import Ambiguities
-from fulfillers.web_context import WebContext
-from utils.context import GlobalPreferenceContext
+from shared.models import Card, CardType
+from shared.context import GlobalPreferenceContext
 from textual import events
 
 logger = get_logger("parallax.app")
@@ -109,32 +106,8 @@ class ParallaxApp(App):
         self.feed_handler.set_text_editor(text_editor)
         logger.debug("TextEditor connected to FeedHandler")
 
-        # Register fulfillers
-        logger.info("Registering fulfillers...")
-
-        # Register Ambiguities fulfiller
-        try:
-            ambiguities_fulfiller = Ambiguities()
-            self.feed_handler.register_fulfiller(ambiguities_fulfiller)
-            logger.info("Ambiguities fulfiller registered successfully")
-        except Exception as e:
-            logger.warning(f"Failed to register Ambiguities fulfiller: {e}")
-
-        # Register WebContext fulfiller
-        try:
-            web_context_fulfiller = WebContext()
-            self.feed_handler.register_fulfiller(web_context_fulfiller)
-            logger.info("WebContext fulfiller registered successfully")
-        except Exception as e:
-            logger.warning(f"Failed to register WebContext fulfiller: {e}")
-
-        # Register Completions fulfiller
-        try:
-            completions_fulfiller = Completions()
-            self.feed_handler.register_fulfiller(completions_fulfiller)
-            logger.info("Completions fulfiller registered successfully")
-        except Exception as e:
-            logger.warning(f"Failed to register Completions fulfiller: {e}")
+        # Fulfillers are now managed by the Parallizer backend server
+        logger.info("Fulfillers are managed by backend server at {PARALLIZER_URL}")
 
         # Start in command mode by default
         command_input = self.query_one("#command-input", CommandInput)

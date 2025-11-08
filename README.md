@@ -45,9 +45,51 @@ uv sync --extra dev
 
 That's it! `uv sync` automatically creates a `.venv` directory and installs all dependencies from `pyproject.toml`. The `--extra dev` flag ensures test dependencies (pytest) are also installed.
 
+## Architecture: Client-Server Setup
+
+Parallax uses a client-server architecture where the frontend (Parallax TUI) communicates with a backend server (Parallizer) for AI-powered features.
+
+### Components
+
+- **Parallax (Frontend/Client)**: Terminal UI for text editing
+- **Parallizer (Backend/Server)**: FastAPI server providing AI fulfillers (completions, ambiguities, web context, code search)
+- **Shared**: Common data models (Card, CardType, GlobalPreferenceContext)
+
+### Running the Backend Server
+
+First, start the Parallizer backend server:
+
+```bash
+# Install backend dependencies
+cd parallizer
+pip install -r requirements.txt
+
+# Configure environment (copy .env.example to .env and fill in values)
+export K2_API_KEY=your_api_key_here
+
+# Start the server (default port 8000)
+python -m parallizer.backend_handler
+```
+
+The server will start at `http://localhost:8000` by default.
+
+### Configuration
+
+Copy `.env.example` to `.env` and configure:
+
+```bash
+# Backend server URL (for frontend)
+PARALLIZER_URL=http://localhost:8000
+
+# LM API configuration (for backend)
+K2_API_KEY=your_api_key_here
+```
+
+For production deployments on different machines, set `PARALLIZER_URL` to the backend server's address.
+
 ## Usage
 
-Run Parallax from the command line:
+Run Parallax from the command line (ensure backend server is running first):
 
 ```bash
 uv run python -m parallax.main
@@ -123,29 +165,43 @@ The AI feed also supports:
 ## Project Structure
 
 ```
-parallax/
+parallax-editor/
 ├── README.md
-├── requirements.txt
-├── parallax/
+├── pyproject.toml
+├── .env.example
+├── parallax/                   # Frontend (Client)
 │   ├── __init__.py
 │   ├── main.py                 # Main application entry point
 │   ├── app.py                  # Textual app with 3-pane layout
 │   ├── widgets/
-│   │   ├── __init__.py
 │   │   ├── file_explorer.py   # File tree navigation
 │   │   ├── text_editor.py     # Editor with line numbers
 │   │   ├── ai_feed.py          # AI information boxes
 │   │   └── command_input.py   # Command mode input
-│   ├── core/
-│   │   ├── __init__.py
-│   │   ├── command_handler.py # Command processing logic
-│   │   ├── link_handler.py     # Markdown link handling (file/web)
-│   │   └── syntax_highlighter.py # Syntax highlighting
-│   └── config/
-│       ├── __init__.py
-│       └── ai_config.py        # AI feed configuration
+│   └── core/
+│       ├── command_handler.py # Command processing logic
+│       ├── feed_handler.py    # HTTP client for backend
+│       ├── link_handler.py     # Markdown link handling
+│       └── syntax_highlighter.py # Syntax highlighting
+├── parallizer/                 # Backend (Server)
+│   ├── backend_handler.py     # FastAPI server
+│   ├── requirements.txt
+│   ├── fulfillers/            # AI fulfiller services
+│   │   ├── base.py
+│   │   ├── completions/       # Inline completions
+│   │   ├── ambiguities/       # Question detection
+│   │   ├── web_context/       # Web search context
+│   │   └── codesearch/        # Code search
+│   ├── signatures/            # DSPy LLM signatures
+│   └── utils/                 # Backend utilities
+│       ├── lm_service.py
+│       ├── ripgrep.py
+│       ├── perplexity.py
+│       └── query_cache.py
+├── shared/                     # Shared models
+│   ├── models.py              # Card, CardType
+│   └── context.py             # GlobalPreferenceContext
 └── tests/
-    ├── __init__.py
     ├── test_command_handler.py
     ├── test_syntax_highlighter.py
     └── test_ai_feed.py

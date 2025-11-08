@@ -1,12 +1,12 @@
 """Ambiguities fulfiller for generating context-aware search queries."""
 
-from utils import get_lm
-from signatures.rg_query_generator import RGQueryGenerator
-from signatures.question_ambiguity_signature import QuestionAmbiguityIdentifier
-from fulfillers.base import Fulfiller
-from fulfillers.models import Card, CardType
-from utils.context import GlobalPreferenceContext
-from utils.ripgrep import RipgrepSearch, SearchResult
+from parallizer.utils import get_lm
+from parallizer.signatures.rg_query_generator import RGQueryGenerator
+from parallizer.signatures.question_ambiguity_signature import QuestionAmbiguityIdentifier
+from parallizer.fulfillers.base import Fulfiller
+from shared.models import Card, CardType
+from shared.context import GlobalPreferenceContext
+from parallizer.utils.ripgrep import RipgrepSearch, SearchResult
 from typing import List, Tuple, Optional
 from abc import ABCMeta
 from pathlib import Path
@@ -218,7 +218,7 @@ class Ambiguities(Fulfiller, dspy.Module, metaclass=CombinedMeta):
 
     async def is_available(self) -> bool:
         """Check if ambiguities fulfiller is available."""
-        from utils import get_lm
+        from parallizer.utils import get_lm
         lm_available = get_lm() is not None
         ripgrep_available = await self.search_backend.is_available()
         available = lm_available and ripgrep_available

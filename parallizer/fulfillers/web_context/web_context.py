@@ -1,12 +1,12 @@
 """WebContext fulfiller for generating web-based context and insights."""
 
-from utils import get_lm
-from signatures.web_query_generator import WebQueryGenerator
-from signatures.web_context_card_signature import WebContextCardSignature
-from fulfillers.base import Fulfiller
-from fulfillers.models import Card, CardType
-from utils.context import GlobalPreferenceContext
-from utils.perplexity import PerplexitySearch, SearchResponse
+from parallizer.utils import get_lm
+from parallizer.signatures.web_query_generator import WebQueryGenerator
+from parallizer.signatures.web_context_card_signature import WebContextCardSignature
+from parallizer.fulfillers.base import Fulfiller
+from shared.models import Card, CardType
+from shared.context import GlobalPreferenceContext
+from parallizer.utils.perplexity import PerplexitySearch, SearchResponse
 from typing import List, Tuple, Optional
 from abc import ABCMeta
 from pathlib import Path
@@ -186,7 +186,7 @@ class WebContext(Fulfiller, dspy.Module, metaclass=CombinedMeta):
 
     async def is_available(self) -> bool:
         """Check if web context fulfiller is available."""
-        from utils import get_lm
+        from parallizer.utils import get_lm
         lm_available = get_lm() is not None
         perplexity_available = self.search_backend.is_available()
         available = lm_available and perplexity_available

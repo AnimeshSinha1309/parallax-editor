@@ -1,8 +1,8 @@
-from utils import get_lm
-from signatures.completions_signature import InlineCompletion
-from fulfillers.base import Fulfiller
-from fulfillers.models import Card, CardType
-from utils.context import GlobalPreferenceContext
+from parallizer.utils import get_lm
+from parallizer.signatures.completions_signature import InlineCompletion
+from parallizer.fulfillers.base import Fulfiller
+from shared.models import Card, CardType
+from shared.context import GlobalPreferenceContext
 from typing import List, Tuple, Optional
 from abc import ABCMeta
 import dspy
@@ -120,7 +120,7 @@ class Completions(Fulfiller, dspy.Module, metaclass=CombinedMeta):
     
     async def is_available(self) -> bool:
         """Check if completions fulfiller is available."""
-        from utils import get_lm
+        from parallizer.utils import get_lm
         available = get_lm() is not None
         logger.info(f"Completions fulfiller availability check: {available}")
         return available

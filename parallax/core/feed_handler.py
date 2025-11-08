@@ -5,13 +5,18 @@ Feed handler for dynamic updates based on editor activity.
 import asyncio
 import random
 import logging
-from typing import Optional, List, Tuple
+import os
+from typing import Optional, List, Tuple, Dict, Any
 from textual.widgets import TextArea
+import httpx
 from parallax.core.suggestion_tracker import SuggestionTracker
-from fulfillers import Fulfiller, Card, CardType
-from utils.context import GlobalPreferenceContext
+from shared.models import Card, CardType
+from shared.context import GlobalPreferenceContext
 
 logger = logging.getLogger("parallax.feed_handler")
+
+# Backend server configuration
+PARALLIZER_URL = os.getenv("PARALLIZER_URL", "http://localhost:8000")
 
 
 class FeedHandler:
@@ -22,7 +27,7 @@ class FeedHandler:
     Uses registered fulfillers to generate cards asynchronously.
     """
 
-    def __init__(self, threshold: int = 20, global_context: GlobalPreferenceContext = None, idle_timeout: float = 4.0):
+    def __init__(self, threshold: int = 20, global_context: GlobalPreferenceContext = None, idle_timeout: float = 4.0, user_id: str = "default_user"):
         """
         Initialize the feed handler.
 
@@ -30,41 +35,44 @@ class FeedHandler:
             threshold: Number of characters to type before triggering an update
             global_context: Global preference context containing scope root and plan path
             idle_timeout: Time in seconds to wait after last keystroke before triggering completion
+            user_id: User identifier for backend session management
         """
         # Use default context if none provided
         if global_context is None:
             global_context = GlobalPreferenceContext(scope_root=".", plan_path=None)
 
-        logger.info(f"Initializing FeedHandler with threshold={threshold}, scope_root={global_context.scope_root}, plan_path={global_context.plan_path}, idle_timeout={idle_timeout}s")
+        logger.info(f"Initializing FeedHandler with threshold={threshold}, scope_root={global_context.scope_root}, plan_path={global_context.plan_path}, idle_timeout={idle_timeout}s, user_id={user_id}")
+        logger.info(f"Backend server URL: {PARALLIZER_URL}")
         self.threshold = threshold
         self.idle_timeout = idle_timeout
         self.char_count = 0
         self.last_content = ""
         self.cursor_position: Tuple[int, int] = (0, 0)
         self.global_context = global_context
+        self.user_id = user_id
         self.ai_feed = None
         self.text_editor = None
         self.feed_items: List[Card] = []
         self.suggestion_tracker = SuggestionTracker()
-        self.fulfillers: List[Fulfiller] = []  # All fulfillers triggered after idle timeout
         self._update_in_progress = False
         self._last_completion_triggered = False
         self._idle_task: Optional[asyncio.Task] = None
         self._ignoring_next_change = False
+        self._last_successful_cards: List[Card] = []  # Cache last successful response for retry
+        self._http_client = httpx.AsyncClient(timeout=30.0)
 
-    def register_fulfiller(self, fulfiller: Fulfiller) -> None:
+    def register_fulfiller(self, fulfiller) -> None:
         """
-        Register a fulfiller to be invoked during updates.
+        Legacy method for fulfiller registration (now handled by backend).
+
+        This method is kept for backward compatibility but does nothing,
+        as fulfillers are now managed by the Parallizer backend server.
 
         Args:
-            fulfiller: A Fulfiller instance to register
+            fulfiller: A Fulfiller instance (ignored)
         """
-        fulfiller_name = fulfiller.__class__.__name__
-        logger.info(f"Registering fulfiller: {fulfiller_name}")
-
-        self.fulfillers.append(fulfiller)
-
-        logger.debug(f"Total registered fulfillers: {len(self.fulfillers)}")
+        fulfiller_name = fulfiller.__class__.__name__ if hasattr(fulfiller, '__class__') else str(fulfiller)
+        logger.info(f"Ignoring fulfiller registration for '{fulfiller_name}' - fulfillers are now managed by backend")
 
     def set_ai_feed(self, ai_feed) -> None:
         """
@@ -162,10 +170,9 @@ class FeedHandler:
         if self.char_count >= self.threshold and not self._last_completion_triggered:
             logger.info(f"Threshold reached ({self.char_count} >= {self.threshold})")
 
-            # Start idle timer for all fulfillers
-            if self.fulfillers:
-                logger.info(f"Starting {self.idle_timeout}s idle timer for {len(self.fulfillers)} fulfiller(s)")
-                self._idle_task = asyncio.create_task(self._wait_and_trigger_idle(new_content))
+            # Start idle timer to trigger backend request
+            logger.info(f"Starting {self.idle_timeout}s idle timer for backend request")
+            self._idle_task = asyncio.create_task(self._wait_and_trigger_idle(new_content))
         elif self._last_completion_triggered:
             logger.debug("Completion already triggered, not starting new timer")
 
@@ -187,11 +194,68 @@ class FeedHandler:
             logger.debug("Idle timer cancelled (user continued typing)")
             # Don't reset counter - keep accumulating
 
+    async def _call_backend(self, document_text: str) -> Optional[List[Card]]:
+        """
+        Call the Parallizer backend to get cards.
+
+        Args:
+            document_text: The current document text content
+
+        Returns:
+            List of Card objects, or None if the request failed
+        """
+        try:
+            logger.info(f"Calling backend at {PARALLIZER_URL}/fulfill")
+
+            # Prepare request payload
+            payload = {
+                "user_id": self.user_id,
+                "document_text": document_text,
+                "cursor_position": list(self.cursor_position),
+                "global_context": {
+                    "scope_root": self.global_context.scope_root,
+                    "plan_path": self.global_context.plan_path
+                }
+            }
+
+            # Make HTTP request
+            response = await self._http_client.post(
+                f"{PARALLIZER_URL}/fulfill",
+                json=payload
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                cards = []
+
+                # Convert JSON response to Card objects
+                for card_data in data.get("cards", []):
+                    card = Card(
+                        header=card_data["header"],
+                        text=card_data["text"],
+                        type=CardType(card_data["type"]),
+                        metadata=card_data.get("metadata", {})
+                    )
+                    cards.append(card)
+
+                logger.info(f"Backend returned {len(cards)} cards")
+                return cards
+            else:
+                logger.error(f"Backend request failed with status {response.status_code}: {response.text}")
+                return None
+
+        except httpx.ConnectError as e:
+            logger.error(f"Failed to connect to backend at {PARALLIZER_URL}: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Error calling backend: {e}", exc_info=True)
+            return None
+
     async def _trigger_update_async(self, document_text: str) -> None:
         """
         Trigger an async update to the AI feed and ghost text.
 
-        Invokes all registered fulfillers concurrently and processes their results.
+        Makes HTTP request to backend server to get cards.
 
         Args:
             document_text: The current document text content
@@ -202,39 +266,24 @@ class FeedHandler:
 
         self._update_in_progress = True
 
-        if not self.fulfillers:
-            logger.warning("No fulfillers registered, skipping update")
-            self._update_in_progress = False
-            return
-
-        logger.info(f"Starting async update with {len(self.fulfillers)} fulfiller(s)")
+        logger.info("Starting async update via backend server")
 
         try:
-            # Invoke all fulfillers concurrently
-            logger.debug(f"Invoking fulfillers with cursor_position={self.cursor_position}, global_context={self.global_context}")
-            tasks = [
-                fulfiller.forward(
-                    document_text=document_text,
-                    cursor_position=self.cursor_position,
-                    global_context=self.global_context,
-                    intent_label="editor_update"
-                )
-                for fulfiller in self.fulfillers
-            ]
+            # Call backend to get cards
+            all_cards = await self._call_backend(document_text)
 
-            logger.info("Gathering results from all fulfillers...")
-            results = await asyncio.gather(*tasks, return_exceptions=True)
-            logger.info(f"Received {len(results)} results from fulfillers")
+            # If backend call failed, use last successful cards (retry logic)
+            if all_cards is None:
+                logger.warning("Backend call failed, using last successful cards")
+                all_cards = self._last_successful_cards
+            else:
+                # Cache successful response
+                self._last_successful_cards = all_cards
 
-            # Flatten all cards from all fulfillers
-            all_cards: List[Card] = []
-            for i, result in enumerate(results):
-                if isinstance(result, Exception):
-                    logger.error(f"Fulfiller {i} error: {result}", exc_info=result)
-                    continue
-                if isinstance(result, list):
-                    logger.debug(f"Fulfiller {i} returned {len(result)} card(s)")
-                    all_cards.extend(result)
+            if not all_cards:
+                logger.info("No cards to process")
+                self._update_in_progress = False
+                return
 
             logger.info(f"Total cards received: {len(all_cards)}")
 

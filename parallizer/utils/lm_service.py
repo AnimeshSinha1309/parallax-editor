@@ -14,7 +14,7 @@ from typing import Optional
 from dotenv import load_dotenv
 
 # Local imports
-from utils.custom_lm_router import CustomLLMRouterLM
+from parallizer.utils.custom_lm_router import CustomLLMRouterLM
 
 # Load environment variables (e.g., during local development or CLI usage).
 load_dotenv()
