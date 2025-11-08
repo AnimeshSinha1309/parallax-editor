@@ -106,6 +106,15 @@ class ParallaxApp(App):
         self.feed_handler.set_text_editor(text_editor)
         logger.debug("TextEditor connected to FeedHandler")
 
+        # Load plan file if provided
+        if self.global_context.plan_path:
+            plan_file = Path(self.global_context.plan_path)
+            if plan_file.exists() and plan_file.is_file():
+                logger.info(f"Loading plan file: {self.global_context.plan_path}")
+                text_editor.load_file(plan_file)
+            else:
+                logger.warning(f"Plan file not found or is not a file: {self.global_context.plan_path}")
+
         # Fulfillers are now managed by the Parallizer backend server
         logger.info("Fulfillers are managed by backend server at {PARALLIZER_URL}")
 
