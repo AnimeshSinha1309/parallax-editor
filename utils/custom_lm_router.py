@@ -7,13 +7,21 @@ result back in a format that DSPy understands.
 
 from __future__ import annotations
 
+import json
 import re
+import traceback
+from datetime import datetime
+from pathlib import Path
+from time import perf_counter
 from typing import Any, Dict, List, Optional
 
 from litellm import acompletion, completion
 from litellm.utils import ModelResponse
 
 from dspy.clients.base_lm import BaseLM
+
+LOG_DIR = Path(__file__).resolve().parents[1] / "llm_logs"
+LOG_FILE = LOG_DIR / "llm_requests.log"
 
 _ANSWER_RE = re.compile(r"<answer>\s*(.*?)\s*</answer>", re.DOTALL | re.IGNORECASE)
 
@@ -28,6 +36,82 @@ def _strip_answer_tags(text: str) -> str:
     if match:
         return match.group(1).strip()
     return text
+
+
+def _current_timestamp() -> str:
+    return datetime.utcnow().isoformat(timespec="milliseconds") + "Z"
+
+
+def _usage_to_dict(usage: Any) -> Dict[str, Any]:
+    if usage is None:
+        return {}
+    if isinstance(usage, dict):
+        return usage
+    for attr in ("model_dump", "dict"):
+        method = getattr(usage, attr, None)
+        if callable(method):
+            try:
+                data = method()
+            except TypeError:
+                try:
+                    data = method(exclude_none=True)  # type: ignore[call-arg]
+                except Exception:
+                    continue
+            except Exception:
+                continue
+            if isinstance(data, dict):
+                return data
+    if hasattr(usage, "__dict__"):
+        return {
+            key: value
+            for key, value in vars(usage).items()
+            if not key.startswith("_")
+        }
+    return {}
+
+
+def _extract_token_usage(response: ModelResponse) -> Dict[str, Optional[int]]:
+    usage_dict = _usage_to_dict(getattr(response, "usage", None))
+    return {
+        "input_tokens": usage_dict.get("prompt_tokens") or usage_dict.get("input_tokens"),
+        "output_tokens": usage_dict.get("completion_tokens") or usage_dict.get("output_tokens"),
+        "total_tokens": usage_dict.get("total_tokens"),
+    }
+
+
+def _extract_return_code(response: ModelResponse) -> Optional[int]:
+    for attr in ("status_code", "status"):
+        if hasattr(response, attr):
+            code = getattr(response, attr)
+            if isinstance(code, int):
+                return code
+    hidden_params = getattr(response, "_hidden_params", None)
+    if isinstance(hidden_params, dict):
+        code = hidden_params.get("status_code") or hidden_params.get("status")
+        if isinstance(code, int):
+            return code
+    return None
+
+
+def _extract_error_code(error: BaseException) -> Optional[int]:
+    for attr in ("status_code", "status", "code", "http_status", "response_status"):
+        if hasattr(error, attr):
+            value = getattr(error, attr)
+            if isinstance(value, int):
+                return value
+    return None
+
+
+def _safe_log_event(event: Dict[str, Any]) -> None:
+    enriched_event = {"timestamp": _current_timestamp(), **event}
+    try:
+        LOG_DIR.mkdir(parents=True, exist_ok=True)
+        with LOG_FILE.open("a", encoding="utf-8") as log_file:
+            log_file.write(json.dumps(enriched_event, default=str))
+            log_file.write("\n")
+    except Exception:
+        # Logging must never block execution
+        return
 
 
 class CustomLLMRouterLM(BaseLM):
@@ -109,15 +193,48 @@ class CustomLLMRouterLM(BaseLM):
         model = payload.pop("model")
         api_messages = payload.pop("messages")
 
-        # Use LiteLLM's async completion API
-        response = await acompletion(
-            model=model,
-            api_base=self.api_base,
-            api_key=self.api_key,
-            messages=api_messages,
-            **payload,
+        start_time = perf_counter()
+        try:
+            response = await acompletion(
+                model=model,
+                api_base=self.api_base,
+                api_key=self.api_key,
+                messages=api_messages,
+                **payload,
+            )
+        except Exception as exc:
+            latency_seconds = perf_counter() - start_time
+            _safe_log_event(
+                {
+                    "status": "error",
+                    "method": "aforward",
+                    "model": model,
+                    "latency_seconds": latency_seconds,
+                    "messages_count": len(api_messages),
+                    "input_tokens": None,
+                    "output_tokens": None,
+                    "total_tokens": None,
+                    "return_code": _extract_error_code(exc),
+                    "error": repr(exc),
+                    "traceback": traceback.format_exc(),
+                }
+            )
+            raise
+
+        latency_seconds = perf_counter() - start_time
+        token_usage = _extract_token_usage(response)
+        _safe_log_event(
+            {
+                "status": "success",
+                "method": "aforward",
+                "model": model,
+                "latency_seconds": latency_seconds,
+                "messages_count": len(api_messages),
+                **token_usage,
+                "return_code": _extract_return_code(response),
+            }
         )
-        
+
         # Strip <answer> tags from response content (if present)
         for choice in response.choices:
             content = choice.message.get("content")
@@ -135,12 +252,49 @@ class CustomLLMRouterLM(BaseLM):
         """Sync forward pass returning an OpenAI-compatible response."""
 
         payload = self._build_payload(prompt=prompt, messages=messages, **kwargs)
-        response = completion(
-            model=payload.pop("model"),
-            api_base=self.api_base,
-            api_key=self.api_key,
-            messages=payload.pop("messages"),
-            **payload,
+        model = payload.pop("model")
+        api_messages = payload.pop("messages")
+
+        start_time = perf_counter()
+        try:
+            response = completion(
+                model=model,
+                api_base=self.api_base,
+                api_key=self.api_key,
+                messages=api_messages,
+                **payload,
+            )
+        except Exception as exc:
+            latency_seconds = perf_counter() - start_time
+            _safe_log_event(
+                {
+                    "status": "error",
+                    "method": "forward",
+                    "model": model,
+                    "latency_seconds": latency_seconds,
+                    "messages_count": len(api_messages),
+                    "input_tokens": None,
+                    "output_tokens": None,
+                    "total_tokens": None,
+                    "return_code": _extract_error_code(exc),
+                    "error": repr(exc),
+                    "traceback": traceback.format_exc(),
+                }
+            )
+            raise
+
+        latency_seconds = perf_counter() - start_time
+        token_usage = _extract_token_usage(response)
+        _safe_log_event(
+            {
+                "status": "success",
+                "method": "forward",
+                "model": model,
+                "latency_seconds": latency_seconds,
+                "messages_count": len(api_messages),
+                **token_usage,
+                "return_code": _extract_return_code(response),
+            }
         )
 
         for choice in response.choices:
