@@ -9,7 +9,6 @@ When running Python scripts, tests, or any Python-related commands, use `uv run`
 Examples:
 - ✅ `uv run python -c "from signatures import RGQueryGenerator"`
 - ✅ `uv run pytest tests/`
-- ✅ `uv run python examples/cached_query_usage.py`
 - ❌ `python -c "..."` (don't use)
 - ❌ `python3 script.py` (don't use)
 
