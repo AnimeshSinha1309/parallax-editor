@@ -15,8 +15,6 @@ import logging
 
 logger = logging.getLogger("parallax.web_context")
 
-dspy.configure(lm=get_lm())
-
 
 # Create a combined metaclass to resolve the conflict between ABCMeta and dspy.Module's metaclass
 class CombinedMeta(ABCMeta, type(dspy.Module)):
@@ -41,7 +39,6 @@ class WebContext(Fulfiller, dspy.Module, metaclass=CombinedMeta):
         lm = get_lm()
         if lm is not None:
             logger.info("LM configured successfully")
-            dspy.configure(lm=lm)
         else:
             logger.warning("No LM available for WebContext fulfiller")
         self.query_generator = dspy.Predict(WebQueryGenerator)
@@ -204,7 +201,7 @@ class WebContext(Fulfiller, dspy.Module, metaclass=CombinedMeta):
         """Check if web context fulfiller is available."""
         from parallizer.utils import get_lm
         lm_available = get_lm() is not None
-        perplexity_available = self.search_backend.is_available()
+        perplexity_available = await self.search_backend.is_available()
         available = lm_available and perplexity_available
         logger.info(f"WebContext fulfiller availability check: LM={lm_available}, Perplexity={perplexity_available}, overall={available}")
         return available

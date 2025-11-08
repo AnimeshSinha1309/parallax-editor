@@ -10,8 +10,6 @@ import logging
 
 logger = logging.getLogger("parallax.completions")
 
-dspy.configure(lm=get_lm())
-
 
 # Create a combined metaclass to resolve the conflict between ABCMeta and dspy.Module's metaclass
 class CombinedMeta(ABCMeta, type(dspy.Module)):
@@ -28,7 +26,6 @@ class Completions(Fulfiller, dspy.Module, metaclass=CombinedMeta):
         lm = get_lm()
         if lm is not None:
             logger.info("LM configured successfully")
-            dspy.configure(lm=lm)
         else:
             logger.warning("No LM available for Completions fulfiller")
         self.predictor = dspy.Predict(InlineCompletion)

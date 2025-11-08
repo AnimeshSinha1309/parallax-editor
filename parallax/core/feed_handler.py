@@ -60,6 +60,8 @@ class FeedHandler:
         self._ignoring_next_change = False
         self._last_successful_cards: List[Card] = []  # Cache last successful response for retry
         self._http_client = httpx.AsyncClient(timeout=30.0)
+        self._polling_task: Optional[asyncio.Task] = None  # Background polling task
+        self._stop_polling = False  # Flag to stop polling
 
     def register_fulfiller(self, fulfiller) -> None:
         """
@@ -168,10 +170,10 @@ class FeedHandler:
 
         # Check if we've reached the threshold
         if self.char_count >= self.threshold and not self._last_completion_triggered:
-            logger.info(f"Threshold reached ({self.char_count} >= {self.threshold})")
+            logger.debug(f"Threshold reached ({self.char_count} >= {self.threshold})")
 
             # Start idle timer to trigger backend request
-            logger.info(f"Starting {self.idle_timeout}s idle timer for backend request")
+            logger.debug(f"Starting {self.idle_timeout}s idle timer for backend request")
             self._idle_task = asyncio.create_task(self._wait_and_trigger_idle(new_content))
         elif self._last_completion_triggered:
             logger.debug("Completion already triggered, not starting new timer")
@@ -198,6 +200,8 @@ class FeedHandler:
         """
         Call the Parallizer backend to get cards.
 
+        Triggers background processing and starts polling if needed.
+
         Args:
             document_text: The current document text content
 
@@ -218,16 +222,18 @@ class FeedHandler:
                 }
             }
 
-            # Make HTTP request
+            # Make HTTP request with timeout
             response = await self._http_client.post(
                 f"{PARALLIZER_URL}/fulfill",
-                json=payload
+                json=payload,
+                timeout=10.0  # 10 second timeout for initial response
             )
 
             if response.status_code == 200:
                 data = response.json()
-                cards = []
+                processing = data.get("processing", False)
 
+                cards = []
                 # Convert JSON response to Card objects
                 for card_data in data.get("cards", []):
                     card = Card(
@@ -238,18 +244,127 @@ class FeedHandler:
                     )
                     cards.append(card)
 
-                logger.info(f"Backend returned {len(cards)} cards")
+                logger.info(f"Backend returned {len(cards)} cards (processing={processing})")
+
+                # Start polling if backend is still processing
+                if processing:
+                    logger.info("Backend is processing in background, starting polling...")
+                    self._start_polling()
+
                 return cards
             else:
                 logger.error(f"Backend request failed with status {response.status_code}: {response.text}")
                 return None
 
-        except httpx.ConnectError as e:
-            logger.error(f"Failed to connect to backend at {PARALLIZER_URL}: {e}")
+        except (httpx.TimeoutException, httpx.ConnectError) as e:
+            logger.warning(f"Backend request timed out or failed to connect: {e}")
+            # Start polling to get cached results
+            logger.info("Starting polling to get cached results...")
+            self._start_polling()
             return None
         except Exception as e:
             logger.error(f"Error calling backend: {e}", exc_info=True)
             return None
+
+    def _start_polling(self):
+        """Start polling the /cached endpoint for updates"""
+        # Cancel existing polling task if any
+        if self._polling_task and not self._polling_task.done():
+            logger.debug("Cancelling existing polling task")
+            self._polling_task.cancel()
+
+        # Start new polling task
+        self._stop_polling = False
+        self._polling_task = asyncio.create_task(self._poll_cached())
+        logger.info("Started polling task")
+
+    async def _poll_cached(self):
+        """
+        Poll the /cached endpoint every 3 seconds for incremental updates.
+        Continues until backend signals processing is complete.
+        """
+        logger.info(f"Starting to poll cached endpoint for user {self.user_id}")
+        poll_count = 0
+
+        try:
+            while not self._stop_polling:
+                try:
+                    poll_count += 1
+                    logger.debug(f"Polling cached endpoint (attempt {poll_count})...")
+
+                    # Request cached data
+                    response = await self._http_client.get(
+                        f"{PARALLIZER_URL}/cached/{self.user_id}",
+                        timeout=5.0
+                    )
+
+                    if response.status_code == 200:
+                        data = response.json()
+                        processing = data.get("processing", False)
+                        last_updated = data.get("last_updated", 0)
+
+                        # Convert cards
+                        cards = []
+                        for card_data in data.get("cards", []):
+                            card = Card(
+                                header=card_data["header"],
+                                text=card_data["text"],
+                                type=CardType(card_data["type"]),
+                                metadata=card_data.get("metadata", {})
+                            )
+                            cards.append(card)
+
+                        logger.debug(f"Cached endpoint returned {len(cards)} cards (processing={processing})")
+
+                        # Update UI with new cards
+                        if cards:
+                            self._update_ui_with_cards(cards)
+
+                        # Stop polling if backend finished processing
+                        if not processing:
+                            logger.info("Backend finished processing, stopping polling")
+                            break
+
+                    else:
+                        logger.warning(f"Cached request failed with status {response.status_code}")
+
+                except asyncio.CancelledError:
+                    logger.debug("Polling task cancelled")
+                    raise
+                except Exception as e:
+                    logger.error(f"Error in polling iteration: {e}")
+
+                # Wait 3 seconds before next poll
+                await asyncio.sleep(3.0)
+
+        except asyncio.CancelledError:
+            logger.info("Polling cancelled")
+        finally:
+            logger.info(f"Stopped polling after {poll_count} attempts")
+
+    def _update_ui_with_cards(self, cards: List[Card]):
+        """
+        Update UI with new cards from backend.
+        Replaces current feed_items and updates widgets.
+        """
+        # Replace feed items
+        self.feed_items = cards
+
+        # Separate by type
+        completion_cards = [c for c in cards if c.type == CardType.COMPLETION]
+        feed_cards = [c for c in cards if c.type in (CardType.QUESTION, CardType.CONTEXT)]
+
+        # Update ghost text if we have completions
+        if completion_cards and self.text_editor:
+            completion_text = completion_cards[0].text
+            logger.debug(f"Updating ghost text: {completion_text[:50]}...")
+            self.text_editor.set_ghost_text(completion_text)
+            self._last_completion_triggered = True
+
+        # Update AI feed if we have feed cards
+        if feed_cards and self.ai_feed:
+            logger.debug(f"Updating AI feed with {len(feed_cards)} cards")
+            self.ai_feed.update_content(feed_cards)
 
     async def _trigger_update_async(self, document_text: str) -> None:
         """
