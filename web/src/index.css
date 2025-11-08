@@ -1,0 +1,139 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* VS Code Dark Theme Colors */
+  --bg-primary: #1e1e1e;
+  --bg-secondary: #252526;
+  --bg-tertiary: #2d2d30;
+  --text-primary: #cccccc;
+  --text-secondary: #969696;
+  --accent-blue: #007acc;
+  --accent-green: #89d185;
+  --accent-yellow: #dcdcaa;
+  --accent-red: #f48771;
+  --border: #3e3e42;
+  --focus-border: #007acc;
+}
+
+[data-theme='light'] {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f3f3f3;
+  --bg-tertiary: #e8e8e8;
+  --text-primary: #333333;
+  --text-secondary: #666666;
+  --accent-blue: #007acc;
+  --accent-green: #4caf50;
+  --accent-yellow: #ff9800;
+  --accent-red: #f44336;
+  --border: #d4d4d4;
+  --focus-border: #007acc;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+code {
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', 'Monaco', monospace;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+/* Focus states */
+*:focus-visible {
+  outline: 2px solid var(--focus-border);
+  outline-offset: 2px;
+}
+
+/* Allotment (resizable panes) styling */
+.split-view-container .split-view-separator {
+  background-color: var(--border) !important;
+}
+
+.split-view-container .split-view-separator:hover {
+  background-color: var(--accent-blue) !important;
+}
+
+/* Utility classes */
+.pane-focused {
+  border: 2px solid var(--focus-border);
+}
+
+.transition-all {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Animation for command palette */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.slide-down {
+  animation: slideDown 0.15s ease-out;
+}
+
+/* Ghost text styling */
+.ghost-text {
+  color: var(--text-secondary);
+  opacity: 0.5;
+  font-style: italic;
+}
+
+/* Card styling */
+.card-question {
+  border-left: 3px solid var(--accent-yellow);
+}
+
+.card-context {
+  border-left: 3px solid var(--accent-blue);
+}
+
+.card-completion {
+  border-left: 3px solid var(--accent-green);
+}

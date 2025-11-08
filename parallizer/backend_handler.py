@@ -32,6 +32,7 @@ from parallizer.fulfillers.ambiguities.ambiguities import Ambiguities
 from parallizer.fulfillers.web_context.web_context import WebContext
 from parallizer.fulfillers.codesearch.search import CodeSearch
 from parallizer.utils import get_lm
+from parallizer.utils.file_manager import FileSystemManager, PathValidator
 
 # Configure logging
 logging.basicConfig(
@@ -115,6 +116,34 @@ class CachedResponse(BaseModel):
     cards: List[CardResponse]
     last_updated: float
     processing: bool
+
+
+class FileTreeResponse(BaseModel):
+    """Response model for file tree"""
+    name: str
+    path: str
+    type: str
+    children: Optional[List['FileTreeResponse']] = None
+
+
+class FileContentRequest(BaseModel):
+    """Request model for reading file content"""
+    path: str
+    scope_root: str
+
+
+class FileContentResponse(BaseModel):
+    """Response model for file content"""
+    content: str
+    language: str
+    path: str
+
+
+class FileSaveRequest(BaseModel):
+    """Request model for saving file"""
+    path: str
+    content: str
+    scope_root: str
 
 
 def initialize_fulfillers():
@@ -464,6 +493,142 @@ async def clear_user_feed(user_id: str):
         return {"status": "success", "message": f"Cache cleared for user {user_id}"}
     else:
         return {"status": "not_found", "message": f"No cache found for user {user_id}"}
+
+
+@app.get("/files/debug")
+async def debug_file_access(scope_root: str):
+    """
+    Debug endpoint to check file system access.
+
+    Returns information about path accessibility.
+    """
+    import os
+    from pathlib import Path
+
+    try:
+        resolved = Path(scope_root).expanduser().resolve()
+
+        return {
+            "original_path": scope_root,
+            "resolved_path": str(resolved),
+            "exists": resolved.exists(),
+            "is_dir": resolved.is_dir() if resolved.exists() else False,
+            "is_file": resolved.is_file() if resolved.exists() else False,
+            "current_working_dir": os.getcwd(),
+            "home_dir": str(Path.home()),
+            "accessible": os.access(str(resolved), os.R_OK) if resolved.exists() else False,
+        }
+    except Exception as e:
+        return {
+            "original_path": scope_root,
+            "error": str(e),
+            "error_type": type(e).__name__,
+        }
+
+
+@app.get("/files/tree", response_model=FileTreeResponse)
+async def get_file_tree(scope_root: str, max_depth: int = 10):
+    """
+    Get directory tree structure for a given scope.
+
+    Args:
+        scope_root: Root directory to list files from
+        max_depth: Maximum depth to traverse (default: 10)
+
+    Returns:
+        FileTreeResponse with nested structure
+    """
+    try:
+        from pathlib import Path
+        resolved = Path(scope_root).expanduser().resolve()
+
+        logger.info(f"File tree request for scope: '{scope_root}'")
+        logger.info(f"Resolved to: '{resolved}'")
+        logger.info(f"Exists: {resolved.exists()}, Is dir: {resolved.is_dir() if resolved.exists() else 'N/A'}")
+
+        # Create file system manager for this scope
+        fs_manager = FileSystemManager(scope_root)
+
+        # Get tree
+        tree = fs_manager.get_tree(max_depth=max_depth)
+
+        # Convert to response format
+        return tree.to_dict()
+
+    except ValueError as e:
+        logger.error(f"Invalid scope '{scope_root}': {e}")
+        raise HTTPException(status_code=400, detail=f"Invalid scope '{scope_root}': {str(e)}")
+    except Exception as e:
+        logger.error(f"Error getting file tree for '{scope_root}': {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Cannot access '{scope_root}': {str(e)}")
+
+
+@app.post("/files/content", response_model=FileContentResponse)
+async def get_file_content(request: FileContentRequest):
+    """
+    Read file content from filesystem.
+
+    Args:
+        request: FileContentRequest with path and scope_root
+
+    Returns:
+        FileContentResponse with content and detected language
+    """
+    try:
+        logger.info(f"File content request: {request.path} (scope: {request.scope_root})")
+
+        # Create file system manager for this scope
+        fs_manager = FileSystemManager(request.scope_root)
+
+        # Read file
+        content, language = fs_manager.read_file(request.path)
+
+        return FileContentResponse(
+            content=content,
+            language=language,
+            path=request.path
+        )
+
+    except ValueError as e:
+        logger.error(f"Error reading file: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error reading file: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
+@app.post("/files/save")
+async def save_file(request: FileSaveRequest):
+    """
+    Save content to a file.
+
+    Args:
+        request: FileSaveRequest with path, content, and scope_root
+
+    Returns:
+        Success status
+    """
+    try:
+        logger.info(f"File save request: {request.path} ({len(request.content)} bytes)")
+
+        # Create file system manager for this scope
+        fs_manager = FileSystemManager(request.scope_root)
+
+        # Write file
+        fs_manager.write_file(request.path, request.content)
+
+        return {
+            "status": "success",
+            "message": f"File saved: {request.path}",
+            "bytes": len(request.content)
+        }
+
+    except ValueError as e:
+        logger.error(f"Error saving file: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error saving file: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 def main():

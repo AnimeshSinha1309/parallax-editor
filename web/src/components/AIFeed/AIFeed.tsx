@@ -1,0 +1,109 @@
+import { useEffect } from 'react';
+import { useFeedStore } from '../../stores/feedStore';
+import { useUIStore } from '../../stores/uiStore';
+import { Card } from './Card';
+import { Loader2, Sparkles } from 'lucide-react';
+import { CardType } from '../../types/models';
+
+export function AIFeed() {
+  const { cards, isLoading, clearCards } = useFeedStore();
+  const { focusPane } = useUIStore();
+
+  const handleClick = () => {
+    focusPane('feed');
+  };
+
+  // Add some mock cards for demo purposes
+  useEffect(() => {
+    // Mock cards will be added here for testing
+    // In production, these will come from the backend
+  }, []);
+
+  const questionCards = cards.filter((c) => c.type === CardType.QUESTION);
+  const contextCards = cards.filter((c) => c.type === CardType.CONTEXT);
+  const completionCards = cards.filter((c) => c.type === CardType.COMPLETION);
+
+  return (
+    <div
+      className="h-full flex flex-col overflow-hidden"
+      onClick={handleClick}
+    >
+      {/* Header */}
+      <div className="px-4 py-2 border-b border-vscode-border flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Sparkles size={16} className="text-vscode-accent-blue" />
+          <h2 className="text-sm font-semibold text-vscode-text-primary uppercase">
+            AI Feed
+          </h2>
+        </div>
+        {cards.length > 0 && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              clearCards();
+            }}
+            className="text-xs text-vscode-text-secondary hover:text-vscode-text-primary transition-colors"
+          >
+            Clear All
+          </button>
+        )}
+      </div>
+
+      {/* Feed Content */}
+      <div className="flex-1 overflow-y-auto px-3 py-3">
+        {isLoading && (
+          <div className="flex items-center justify-center gap-2 py-8 text-vscode-text-secondary">
+            <Loader2 size={20} className="animate-spin" />
+            <span className="text-sm">Loading suggestions...</span>
+          </div>
+        )}
+
+        {!isLoading && cards.length === 0 && (
+          <div className="text-center py-8 text-vscode-text-secondary">
+            <Sparkles size={32} className="mx-auto mb-2 opacity-50" />
+            <p className="text-sm">No suggestions yet</p>
+            <p className="text-xs mt-1">
+              Start editing to see AI-powered suggestions
+            </p>
+          </div>
+        )}
+
+        {/* Questions Section */}
+        {questionCards.length > 0 && (
+          <div className="mb-4">
+            <h3 className="text-xs uppercase font-semibold text-vscode-text-secondary mb-2">
+              Questions
+            </h3>
+            {questionCards.map((card) => (
+              <Card key={card.id} card={card} />
+            ))}
+          </div>
+        )}
+
+        {/* Context Section */}
+        {contextCards.length > 0 && (
+          <div className="mb-4">
+            <h3 className="text-xs uppercase font-semibold text-vscode-text-secondary mb-2">
+              Context
+            </h3>
+            {contextCards.map((card) => (
+              <Card key={card.id} card={card} />
+            ))}
+          </div>
+        )}
+
+        {/* Completions Section */}
+        {completionCards.length > 0 && (
+          <div className="mb-4">
+            <h3 className="text-xs uppercase font-semibold text-vscode-text-secondary mb-2">
+              Completions
+            </h3>
+            {completionCards.map((card) => (
+              <Card key={card.id} card={card} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
