@@ -94,26 +94,43 @@ class Ambiguities(Fulfiller, dspy.Module, metaclass=CombinedMeta):
 
         logger.info(f"Generated {len(query_result.queries)} queries: {query_result.queries}")
 
-        # Perform searches for each query and collect all results
-        all_search_results: List[SearchResult] = []
-        for query in query_result.queries:
-            logger.info(f"Executing search for query: {query}")
-
-            # Perform the async search
-            search_result: SearchResult = await self.search_backend.search(
+        # Perform searches in parallel for all queries
+        logger.info("Executing all code searches in parallel...")
+        search_tasks = [
+            self.search_backend.search(
                 query=query,
                 directory=global_context.scope_root,
                 max_results=10,  # Limit results per query
                 context_lines=2,
                 case_sensitive=False
             )
+            for query in query_result.queries
+        ]
 
-            # Log the search result
-            logger.info(f"Search result for '{query}': success={search_result.success}, total_matches={search_result.total_matches}")
-            if search_result.error:
-                logger.warning(f"Search error: {search_result.error}")
+        # Execute all searches concurrently
+        import asyncio
+        search_results = await asyncio.gather(*search_tasks, return_exceptions=True)
 
-            all_search_results.append(search_result)
+        # Process results and filter out exceptions
+        all_search_results: List[SearchResult] = []
+        for i, result in enumerate(search_results):
+            query = query_result.queries[i]
+
+            if isinstance(result, Exception):
+                logger.error(f"Search failed for query '{query}': {result}")
+                # Create failed search result
+                all_search_results.append(SearchResult(
+                    success=False,
+                    query=query,
+                    total_matches=0,
+                    matches=[],
+                    error=str(result)
+                ))
+            else:
+                logger.info(f"Search result for '{query}': success={result.success}, total_matches={result.total_matches}")
+                if result.error:
+                    logger.warning(f"Search error: {result.error}")
+                all_search_results.append(result)
 
         # Combine all search results into a formatted string
         combined_context = self._combine_search_results(all_search_results)

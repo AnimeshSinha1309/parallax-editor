@@ -90,24 +90,40 @@ class WebContext(Fulfiller, dspy.Module, metaclass=CombinedMeta):
 
         logger.info(f"Generated {len(query_result.queries)} queries: {query_result.queries}")
 
-        # Perform searches for each query and collect all results
-        all_search_responses: List[SearchResponse] = []
-        for query in query_result.queries:
-            logger.info(f"Executing web search for query: {query}")
-
-            # Perform the search
-            search_response: SearchResponse = self.search_backend.search(
+        # Perform searches in parallel for all queries
+        logger.info("Executing all web searches in parallel...")
+        search_tasks = [
+            self.search_backend.search(
                 query=query,
                 max_tokens=1024,
                 temperature=0.2
             )
+            for query in query_result.queries
+        ]
 
-            # Log the search result
-            logger.info(f"Search result for '{query}': success={search_response.success}")
-            if search_response.error:
-                logger.warning(f"Search error: {search_response.error}")
+        # Execute all searches concurrently
+        import asyncio
+        search_results = await asyncio.gather(*search_tasks, return_exceptions=True)
 
-            all_search_responses.append(search_response)
+        # Process results and filter out exceptions
+        all_search_responses: List[SearchResponse] = []
+        for i, result in enumerate(search_results):
+            query = query_result.queries[i]
+
+            if isinstance(result, Exception):
+                logger.error(f"Search failed for query '{query}': {result}")
+                # Create failed response
+                all_search_responses.append(SearchResponse(
+                    success=False,
+                    content="",
+                    citations=[],
+                    error=str(result)
+                ))
+            else:
+                logger.info(f"Search result for '{query}': success={result.success}")
+                if result.error:
+                    logger.warning(f"Search error: {result.error}")
+                all_search_responses.append(result)
 
         # Combine all search results into citation list format
         combined_context = self._combine_search_results(all_search_responses)
