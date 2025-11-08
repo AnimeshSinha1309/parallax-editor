@@ -1,5 +1,7 @@
 import { ChevronRight, ChevronDown, File, Folder } from 'lucide-react';
 import { useFileSystemStore } from '../../stores/fileSystemStore';
+import { useFileSystem } from '../../hooks/useFileSystem';
+import { config } from '../../utils/config';
 import type { FileNode } from '../../types/models';
 import clsx from 'clsx';
 
@@ -16,6 +18,10 @@ export function FileTree({ node, level }: FileTreeProps) {
     selectFile,
   } = useFileSystemStore();
 
+  const { loadFile } = useFileSystem({
+    enabled: config.enableBackend,
+  });
+
   const isExpanded = expandedPaths.has(node.path);
   const isSelected = selectedPath === node.path;
   const isDirectory = node.type === 'directory';
@@ -27,7 +33,10 @@ export function FileTree({ node, level }: FileTreeProps) {
       toggleExpanded(node.path);
     } else {
       selectFile(node.path);
-      // TODO: Load file content into editor
+      // Load file content into editor
+      if (config.enableBackend) {
+        loadFile(node.path);
+      }
     }
   };
 

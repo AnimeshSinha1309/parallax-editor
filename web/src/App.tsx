@@ -8,8 +8,10 @@ import { VimCommandBar } from './components/VimCommandBar';
 import { Header } from './components/Header';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useFulfillment } from './hooks/useFulfillment';
+import { useFileSystem } from './hooks/useFileSystem';
 import { useUIStore } from './stores/uiStore';
 import { useFeedStore } from './stores/feedStore';
+import { useFileSystemStore } from './stores/fileSystemStore';
 import { CardType } from './types/models';
 import { config } from './utils/config';
 
@@ -33,13 +35,46 @@ function App() {
     enabled: config.enableBackend,
   });
 
+  // File system operations
+  const { loadFileTree, loadFile } = useFileSystem({
+    enabled: config.enableBackend,
+  });
+
   const { theme } = useUIStore();
   const { addCards } = useFeedStore();
+  const { setScopeRoot, setPlanPath } = useFileSystemStore();
 
   // Apply theme to document
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
+
+  // Parse URL parameters and initialize file system
+  useEffect(() => {
+    if (!config.enableBackend) return;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const scopeParam = urlParams.get('scope');
+    const planParam = urlParams.get('plan');
+
+    // Set scope root
+    if (scopeParam) {
+      console.log(`Initializing with scope: ${scopeParam}`);
+      setScopeRoot(scopeParam);
+
+      // Load file tree
+      loadFileTree(scopeParam);
+
+      // Load plan file if specified
+      if (planParam) {
+        console.log(`Loading plan file: ${planParam}`);
+        setPlanPath(planParam);
+        loadFile(planParam);
+      }
+    } else {
+      console.log('No scope parameter provided, using default scope');
+    }
+  }, [loadFileTree, loadFile, setScopeRoot, setPlanPath]);
 
   // Add some demo cards on mount (only if backend is disabled)
   useEffect(() => {
