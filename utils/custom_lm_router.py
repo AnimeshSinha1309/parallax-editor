@@ -89,17 +89,36 @@ class CustomLLMRouterLM(BaseLM):
         messages: Optional[List[Dict[str, str]]] = None,
         **kwargs: Any,
     ) -> ModelResponse:
-        """Async forward pass returning an OpenAI-compatible response."""
+        """Async forward pass returning an OpenAI-compatible response.
+        
+        This method uses LiteLLM's acompletion for async LLM calls, which is
+        compatible with DSPy's async interface (e.g., predictor.acall()).
+        
+        Args:
+            prompt: Optional text prompt (mutually exclusive with messages).
+            messages: Optional list of message dicts with 'role' and 'content'.
+            **kwargs: Additional parameters passed to the LLM (temperature, max_tokens, etc.).
+            
+        Returns:
+            ModelResponse: OpenAI-compatible response object with choices.
+        """
 
         payload = self._build_payload(prompt=prompt, messages=messages, **kwargs)
 
+        # Extract model and messages before passing remaining kwargs
+        model = payload.pop("model")
+        api_messages = payload.pop("messages")
+
+        # Use LiteLLM's async completion API
         response = await acompletion(
-            model=payload.pop("model"),
+            model=model,
             api_base=self.api_base,
             api_key=self.api_key,
-            messages=payload.pop("messages"),
+            messages=api_messages,
             **payload,
         )
+        
+        # Strip <answer> tags from response content (if present)
         for choice in response.choices:
             content = choice.message.get("content")
             if isinstance(content, str):
