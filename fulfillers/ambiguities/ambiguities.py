@@ -48,7 +48,7 @@ class Ambiguities(Fulfiller, dspy.Module, metaclass=CombinedMeta):
         self.question_identifier = dspy.Predict(QuestionAmbiguityIdentifier)
         self.search_backend = RipgrepSearch()
 
-    async def invoke(
+    async def forward(
         self,
         document_text: str,
         cursor_position: Tuple[int, int],
@@ -57,7 +57,7 @@ class Ambiguities(Fulfiller, dspy.Module, metaclass=CombinedMeta):
         **kwargs
     ) -> List[Card]:
         """
-        Invoke ambiguities fulfiller (delegates to forward and performs searches).
+        Forward pass for ambiguities fulfiller - generates questions and identifies ambiguities.
 
         Args:
             document_text: The entire text content of the current document

@@ -22,7 +22,7 @@ class DummyFulfiller(Fulfiller):
     TODO: Replace with actual LLM-powered fulfillers in production.
     """
 
-    async def invoke(
+    async def forward(
         self,
         document_text: str,
         cursor_position: Tuple[int, int],

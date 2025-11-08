@@ -33,7 +33,7 @@ class Completions(Fulfiller, dspy.Module, metaclass=CombinedMeta):
             logger.warning("No LM available for Completions fulfiller")
         self.predictor = dspy.Predict(InlineCompletion)
 
-    async def invoke(
+    async def forward(
         self,
         document_text: str,
         cursor_position: Tuple[int, int],
@@ -42,7 +42,7 @@ class Completions(Fulfiller, dspy.Module, metaclass=CombinedMeta):
         **kwargs
     ) -> List[Card]:
         """
-        Invoke completions fulfiller to generate inline completions.
+        Forward pass for completions fulfiller - generates inline completions.
 
         Args:
             document_text: The entire text content of the current document

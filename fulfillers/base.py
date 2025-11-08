@@ -21,7 +21,7 @@ class Fulfiller(ABC):
     """
 
     @abstractmethod
-    async def invoke(
+    async def forward(
         self,
         document_text: str,
         cursor_position: Tuple[int, int],
@@ -30,7 +30,7 @@ class Fulfiller(ABC):
         **kwargs
     ) -> List[Card]:
         """
-        Invoke the fulfiller with the given inputs.
+        Forward pass for the fulfiller.
 
         Args:
             document_text: The entire text content of the current document as a string

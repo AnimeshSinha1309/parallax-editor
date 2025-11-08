@@ -250,7 +250,7 @@ class FeedHandler:
             # Invoke all fulfillers concurrently
             logger.debug(f"Invoking {fulfiller_type} fulfillers with cursor_position={self.cursor_position}, global_context={self.global_context}")
             tasks = [
-                fulfiller.invoke(
+                fulfiller.forward(
                     document_text=document_text,
                     cursor_position=self.cursor_position,
                     global_context=self.global_context,

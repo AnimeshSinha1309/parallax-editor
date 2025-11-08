@@ -47,7 +47,7 @@ class CodeSearch(Fulfiller):
         self.default_context_lines = context_lines
         self.default_case_sensitive = case_sensitive
 
-    async def invoke(
+    async def forward(
         self,
         document_text: str,
         cursor_position: Tuple[int, int],
