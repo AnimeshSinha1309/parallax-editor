@@ -2,12 +2,19 @@
  * Application configuration
  */
 
-export const config = {
-  // Backend API URL
-  backendUrl: import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000',
+// Get backend port from URL query parameter
+function getBackendUrl(): string {
+  const urlParams = new URLSearchParams(window.location.search);
+  const backendPort = urlParams.get('backend_port') || '8000';
+  return `http://localhost:${backendPort}`;
+}
 
-  // Feature flags
-  enableBackend: import.meta.env.VITE_ENABLE_BACKEND === 'true',
+export const config = {
+  // Backend API URL (determined from URL query parameter)
+  backendUrl: getBackendUrl(),
+
+  // Feature flags (backend always enabled)
+  enableBackend: true,
 
   // Fulfillment settings (matching CLI behavior)
   fulfillment: {
