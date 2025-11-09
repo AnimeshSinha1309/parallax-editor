@@ -196,10 +196,69 @@ def get_or_create_cache(user_id: str) -> UserCache:
     return user_caches[user_id]
 
 
+def _is_text_substantially_different(new_text: str, existing_texts: List[str], threshold: float = 0.5) -> bool:
+    """
+    Check if new_text is substantially different from all existing texts using substring matching.
+
+    Args:
+        new_text: The text to check
+        existing_texts: List of existing texts to compare against
+        threshold: Similarity threshold (0.0-1.0). Texts with similarity >= threshold are considered similar.
+                  Default 0.5 means if 50% or more of the shorter text is found in the longer text, they're similar.
+
+    Returns:
+        True if new_text is substantially different from all existing texts, False otherwise
+    """
+    if not existing_texts:
+        return True
+
+    new_text_lower = new_text.lower().strip()
+    if not new_text_lower:
+        return False
+
+    for existing_text in existing_texts:
+        existing_text_lower = existing_text.lower().strip()
+        if not existing_text_lower:
+            continue
+
+        # Find longest common substring
+        shorter = new_text_lower if len(new_text_lower) <= len(existing_text_lower) else existing_text_lower
+        longer = existing_text_lower if len(new_text_lower) <= len(existing_text_lower) else new_text_lower
+
+        # Check if shorter text is mostly contained in longer text
+        # We'll use a sliding window approach to find maximum overlap
+        max_overlap = 0
+        shorter_len = len(shorter)
+
+        # Check for substring containment
+        if shorter in longer:
+            max_overlap = shorter_len
+        else:
+            # Find longest common substring using dynamic programming approach
+            # Simplified: check overlapping segments
+            for i in range(len(shorter)):
+                for j in range(len(longer)):
+                    k = 0
+                    while (i + k < len(shorter) and j + k < len(longer) and
+                           shorter[i + k] == longer[j + k]):
+                        k += 1
+                    max_overlap = max(max_overlap, k)
+
+        # Calculate similarity as ratio of overlap to shorter text length
+        similarity = max_overlap / shorter_len if shorter_len > 0 else 0
+
+        # If similarity is above threshold, texts are too similar
+        if similarity >= threshold:
+            return False
+
+    return True
+
+
 def update_user_cache_with_cards(user_id: str, new_cards: List[Card]) -> List[Card]:
     """
     Update user cache with new cards incrementally.
     Maintains max 3 cards per type, removing oldest cards when limit is exceeded.
+    Only adds cards with substantially different text from existing cards of the same type.
 
     Args:
         user_id: User identifier
@@ -217,7 +276,15 @@ def update_user_cache_with_cards(user_id: str, new_cards: List[Card]) -> List[Ca
 
     # Add new cards
     for card in new_cards:
-        cards_by_type[card.type].append(card)
+        # Get existing texts for this card type
+        existing_texts = [c.text for c in cards_by_type[card.type]]
+
+        # Only append if card text is substantially different
+        if _is_text_substantially_different(card.text, existing_texts):
+            cards_by_type[card.type].append(card)
+            logger.debug(f"Added new card of type {card.type.value} for user {user_id}")
+        else:
+            logger.debug(f"Skipped duplicate/similar card of type {card.type.value} for user {user_id}")
 
         # Keep only the most recent MAX_CARDS_PER_TYPE per type
         if len(cards_by_type[card.type]) > MAX_CARDS_PER_TYPE:

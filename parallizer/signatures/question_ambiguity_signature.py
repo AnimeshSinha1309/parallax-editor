@@ -33,6 +33,7 @@ class QuestionAmbiguityIdentifier(dspy.Signature):
             "'The plan mentions using library Y but the codebase uses Z', "
             "'What happens if condition A occurs during step 3?'. "
             "These will be used to create cards for team discussion and resolution."
+            "IMPORTANT: If there are specific instances in code context, mention the related files."
         )
     )
 

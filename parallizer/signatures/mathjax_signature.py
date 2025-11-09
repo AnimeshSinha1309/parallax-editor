@@ -6,7 +6,7 @@ import dspy
 
 
 class MathJaxCompletion(dspy.Signature):
-    """Detect incomplete math expressions and produce MathJax-compliant LaTeX completions."""
+    """Detect incomplete math expressions and produce MathJax-compliant LaTeX completions together with context and explanation."""
 
     current_document: str = dspy.InputField(
         desc=(
@@ -26,7 +26,9 @@ class MathJaxCompletion(dspy.Signature):
         desc=(
             "List of MathJax-formatted equations (delimited with '$...$' or '$$...$$') that complete "
             "any partially written expressions found in the document. Preserve mathematical intent, ensure "
-            "valid LaTeX syntax, and avoid duplicate or redundant equations."
+            "valid LaTeX syntax, and avoid duplicate or redundant equations. Together with that, it should "
+            "provide some context outside the equation on what the formula is about, what paper it comes from "
+            "or what is it's utility."
         )
     )
     # notes: Optional[str] = dspy.OutputField(

@@ -21,7 +21,8 @@ class EmailSearcher(dspy.Signature):
         desc=(
             "1 to 2 emails selected from mailbox_data which seem contextually relevant "
             "to the current_plan_document. Return the most relevant emails that provide "
-            "useful context for the current task or plan."
+            "useful context for the current task or plan. If no emails feel related, or even if they "
+            "don't have a specific word match, feel free to return 0 emails as well."
         )
     )
 
