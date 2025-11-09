@@ -22,6 +22,8 @@ export function AIFeed() {
   const questionCards = cards.filter((c) => c.type === CardType.QUESTION);
   const contextCards = cards.filter((c) => c.type === CardType.CONTEXT);
   const completionCards = cards.filter((c) => c.type === CardType.COMPLETION);
+  const mathCards = cards.filter((c) => c.type === CardType.MATH);
+  const emailCards = cards.filter((c) => c.type === CardType.EMAIL);
 
   return (
     <div
@@ -87,6 +89,30 @@ export function AIFeed() {
               Context
             </h3>
             {contextCards.map((card) => (
+              <Card key={card.id} card={card} />
+            ))}
+          </div>
+        )}
+
+        {/* Math Section */}
+        {mathCards.length > 0 && (
+          <div className="mb-4">
+            <h3 className="text-xs uppercase font-semibold text-vscode-text-secondary mb-2">
+              Math
+            </h3>
+            {mathCards.map((card) => (
+              <Card key={card.id} card={card} />
+            ))}
+          </div>
+        )}
+
+        {/* Email Section */}
+        {emailCards.length > 0 && (
+          <div className="mb-4">
+            <h3 className="text-xs uppercase font-semibold text-vscode-text-secondary mb-2">
+              Emails
+            </h3>
+            {emailCards.map((card) => (
               <Card key={card.id} card={card} />
             ))}
           </div>
