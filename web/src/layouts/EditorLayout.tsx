@@ -27,7 +27,7 @@ export function EditorLayout({
   return (
     <div className="flex flex-col h-full w-full bg-vscode-bg-primary">
       {/* Header */}
-      <div className="h-12 border-b border-vscode-border flex-shrink-0">
+      <div className="h-10 border-b border-vscode-border flex-shrink-0">
         {header}
       </div>
 
@@ -42,10 +42,7 @@ export function EditorLayout({
               maxSize={600}
             >
               <div
-                className={clsx(
-                  'h-full bg-vscode-bg-secondary border-r border-vscode-border',
-                  activePane === 'files' && 'pane-focused'
-                )}
+                className="h-full bg-vscode-bg-primary"
                 data-pane="files"
               >
                 {leftPanel}
@@ -56,10 +53,7 @@ export function EditorLayout({
           {/* Center Panel - Editor */}
           <Allotment.Pane minSize={400}>
             <div
-              className={clsx(
-                'h-full bg-vscode-bg-primary',
-                activePane === 'editor' && 'pane-focused'
-              )}
+              className="h-full bg-vscode-bg-primary"
               data-pane="editor"
             >
               {centerPanel}
@@ -74,10 +68,7 @@ export function EditorLayout({
               maxSize={800}
             >
               <div
-                className={clsx(
-                  'h-full bg-vscode-bg-secondary border-l border-vscode-border',
-                  activePane === 'feed' && 'pane-focused'
-                )}
+                className="h-full bg-vscode-bg-primary"
                 data-pane="feed"
               >
                 {rightPanel}
@@ -88,7 +79,7 @@ export function EditorLayout({
       </div>
 
       {/* Footer - Command bar */}
-      <div className="h-8 border-t border-vscode-border flex-shrink-0">
+      <div className="h-7 border-t border-vscode-border flex-shrink-0">
         {footer}
       </div>
     </div>

@@ -89,24 +89,24 @@ export function VimCommandBar() {
 
   if (!vimCommandMode) {
     return (
-      <div className="h-full flex items-center px-4 text-xs text-vscode-text-secondary">
-        <span>Press <kbd className="px-1 py-0.5 bg-vscode-bg-tertiary rounded">:</kbd> for Vim commands</span>
-        <span className="mx-4">|</span>
-        <span>Press <kbd className="px-1 py-0.5 bg-vscode-bg-tertiary rounded">Ctrl+P</kbd> for command palette</span>
+      <div className="h-full flex items-center px-3 text-xs text-vscode-text-secondary">
+        <span>Press <kbd className="px-1 py-0.5 bg-vscode-bg-tertiary text-vscode-text-secondary">:</kbd> for commands</span>
+        <span className="mx-3 text-vscode-border">|</span>
+        <span>Press <kbd className="px-1 py-0.5 bg-vscode-bg-tertiary text-vscode-text-secondary">Ctrl+P</kbd> for palette</span>
       </div>
     );
   }
 
   return (
-    <div className="h-full flex items-center px-2 bg-vscode-bg-secondary">
-      <span className="text-vscode-accent-yellow font-bold mr-1">:</span>
+    <div className="h-full flex items-center px-3 bg-vscode-bg-primary">
+      <span className="text-vscode-accent-blue font-medium mr-1.5">:</span>
       <input
         ref={inputRef}
         type="text"
         value={vimCommand}
         onChange={(e) => setVimCommand(e.target.value)}
         onKeyDown={handleKeyDown}
-        className="flex-1 bg-transparent text-vscode-text-primary outline-none text-sm"
+        className="flex-1 bg-transparent text-vscode-text-primary outline-none text-xs"
         placeholder="Enter command..."
       />
     </div>

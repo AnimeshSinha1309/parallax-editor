@@ -48,17 +48,17 @@ export function Card({ card }: CardProps) {
   return (
     <div
       className={clsx(
-        'mb-3 rounded bg-vscode-bg-tertiary border border-vscode-border overflow-hidden transition-all cursor-pointer',
-        isSelected && 'ring-2 ring-vscode-focus-border',
+        'mb-2 bg-vscode-bg-tertiary border border-vscode-border overflow-hidden transition-all cursor-pointer',
+        isSelected && 'border-vscode-focus-border',
         `card-${card.type}`
       )}
       onClick={handleClick}
     >
       {/* Card Header */}
-      <div className="px-3 py-2 border-b border-vscode-border flex items-start justify-between">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <Icon size={16} className={clsx('flex-shrink-0', iconColor)} />
-          <span className="text-sm font-semibold text-vscode-text-primary truncate">
+      <div className="px-2.5 py-1.5 border-b border-vscode-border flex items-start justify-between">
+        <div className="flex items-center gap-1.5 flex-1 min-w-0">
+          <Icon size={14} className={clsx('flex-shrink-0', iconColor)} />
+          <span className="text-xs font-medium text-vscode-text-primary truncate">
             {card.header}
           </span>
         </div>
@@ -67,20 +67,20 @@ export function Card({ card }: CardProps) {
           className="flex-shrink-0 ml-2 text-vscode-text-secondary hover:text-vscode-accent-red transition-colors"
           aria-label="Delete card"
         >
-          <X size={16} />
+          <X size={12} />
         </button>
       </div>
 
       {/* Card Body */}
-      <div className="px-3 py-2 text-sm text-vscode-text-primary">
+      <div className="px-2.5 py-2 text-xs text-vscode-text-primary">
         <ReactMarkdown
           className="markdown-content"
           remarkPlugins={[remarkMath]}
           rehypePlugins={[rehypeKatex]}
           components={{
-            p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+            p: ({ children }) => <p className="mb-1.5 last:mb-0">{children}</p>,
             code: ({ children }) => (
-              <code className="px-1 py-0.5 bg-vscode-bg-primary rounded text-xs font-mono">
+              <code className="px-1 py-0.5 bg-vscode-bg-primary text-xs font-mono">
                 {children}
               </code>
             ),
@@ -89,7 +89,7 @@ export function Card({ card }: CardProps) {
                 href={href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-vscode-accent-blue underline hover:text-vscode-accent-green"
+                className="text-vscode-accent-blue hover:underline"
               >
                 {children}
               </a>
@@ -101,12 +101,12 @@ export function Card({ card }: CardProps) {
 
         {/* Metadata (if any) */}
         {card.metadata && Object.keys(card.metadata).length > 0 && (
-          <div className="mt-2 pt-2 border-t border-vscode-border text-xs text-vscode-text-secondary">
+          <div className="mt-1.5 pt-1.5 border-t border-vscode-border text-xs text-vscode-text-secondary">
             {card.metadata.source && (
-              <div>Source: {card.metadata.source}</div>
+              <div className="text-xs">Source: {card.metadata.source}</div>
             )}
             {card.metadata.confidence && (
-              <div>Confidence: {(card.metadata.confidence * 100).toFixed(0)}%</div>
+              <div className="text-xs">Confidence: {(card.metadata.confidence * 100).toFixed(0)}%</div>
             )}
           </div>
         )}

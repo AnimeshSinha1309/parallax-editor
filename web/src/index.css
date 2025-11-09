@@ -5,23 +5,23 @@
 :root {
   /* Beautified Dark Theme - Black & Grey */
   --bg-primary: #0a0a0a;
-  --bg-secondary: #121212;
-  --bg-tertiary: #1a1a1a;
+  --bg-secondary: #0a0a0a;
+  --bg-tertiary: #121212;
   --text-primary: #e8e8e8;
-  --text-secondary: #9ca3af;
+  --text-secondary: #6b7280;
   --accent-blue: #3b82f6;
   --accent-green: #10b981;
   --accent-yellow: #f59e0b;
   --accent-red: #ef4444;
-  --border: #27272a;
+  --border: #1f1f1f;
   --focus-border: #3b82f6;
 }
 
 [data-theme='light'] {
   /* Beautified Light Theme - White & Grey */
   --bg-primary: #ffffff;
-  --bg-secondary: #f9fafb;
-  --bg-tertiary: #f3f4f6;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #fafafa;
   --text-primary: #111827;
   --text-secondary: #6b7280;
   --accent-blue: #2563eb;
@@ -81,8 +81,8 @@ code {
 
 /* Focus states */
 *:focus-visible {
-  outline: 2px solid var(--focus-border);
-  outline-offset: 2px;
+  outline: 1px solid var(--focus-border);
+  outline-offset: -1px;
 }
 
 /* Allotment (resizable panes) styling */
@@ -95,12 +95,8 @@ code {
 }
 
 /* Utility classes */
-.pane-focused {
-  border: 2px solid var(--focus-border);
-}
-
 .transition-all {
-  transition: all 0.2s ease-in-out;
+  transition: all 0.15s ease-in-out;
 }
 
 /* Animation for command palette */
@@ -128,23 +124,23 @@ code {
 
 /* Card styling */
 .card-question {
-  border-left: 3px solid var(--accent-yellow);
+  border-left: 2px solid var(--accent-yellow);
 }
 
 .card-context {
-  border-left: 3px solid var(--accent-blue);
+  border-left: 2px solid var(--accent-blue);
 }
 
 .card-completion {
-  border-left: 3px solid var(--accent-green);
+  border-left: 2px solid var(--accent-green);
 }
 
 .card-math {
-  border-left: 3px solid #a855f7; /* Purple accent */
+  border-left: 2px solid #a855f7; /* Purple accent */
 }
 
 .card-email {
-  border-left: 3px solid #f97316; /* Orange accent */
+  border-left: 2px solid #f97316; /* Orange accent */
 }
 
 /* KaTeX rendering styles */

@@ -16,24 +16,10 @@ export function FileExplorer() {
       onClick={handleClick}
     >
       {/* Header */}
-      <div className="px-4 py-2 border-b border-vscode-border">
-        <h2 className="text-sm font-semibold text-vscode-text-primary uppercase">
+      <div className="px-3 py-2 border-b border-vscode-border">
+        <h2 className="text-xs font-medium text-vscode-text-secondary">
           Explorer
         </h2>
-      </div>
-
-      {/* Context Info */}
-      <div className="px-4 py-2 text-xs text-vscode-text-secondary border-b border-vscode-border">
-        <div className="mb-1">
-          <span className="font-semibold">Scope:</span>{' '}
-          <span className="font-mono">{scopeRoot}</span>
-        </div>
-        {planPath && (
-          <div>
-            <span className="font-semibold">Plan:</span>{' '}
-            <span className="font-mono">{planPath}</span>
-          </div>
-        )}
       </div>
 
       {/* File Tree */}
@@ -41,7 +27,7 @@ export function FileExplorer() {
         {rootNode ? (
           <FileTree node={rootNode} level={0} />
         ) : (
-          <div className="text-vscode-text-secondary text-sm p-4">
+          <div className="text-vscode-text-secondary text-xs px-2 py-4">
             No files to display
           </div>
         )}
