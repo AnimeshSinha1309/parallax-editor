@@ -7,10 +7,10 @@ describe('EditorStore', () => {
     useEditorStore.getState().reset();
   });
 
-  it('should initialize with default content', () => {
+  it('should initialize with empty content', () => {
     const { content, language, cursorPosition } = useEditorStore.getState();
 
-    expect(content).toContain('Welcome to Parallax');
+    expect(content).toBe('');
     expect(language).toBe('markdown');
     expect(cursorPosition).toEqual([0, 0]);
   });
@@ -59,7 +59,7 @@ describe('EditorStore', () => {
     reset();
 
     const state = useEditorStore.getState();
-    expect(state.content).toContain('Welcome to Parallax');
+    expect(state.content).toBe('');
     expect(state.cursorPosition).toEqual([0, 0]);
     expect(state.filePath).toBeUndefined();
   });
