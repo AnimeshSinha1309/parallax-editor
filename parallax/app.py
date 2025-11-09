@@ -15,7 +15,7 @@ from parallax.core.command_handler import CommandHandler
 from parallax.core.feed_handler import FeedHandler
 from parallax.core.logging_config import setup_logging, get_logger
 from shared.models import Card, CardType
-from shared.context import GlobalPreferenceContext
+from shared.context import GlobalPreferenceContext, generate_user_id
 from textual import events
 
 logger = get_logger("parallax.app")
@@ -74,7 +74,12 @@ class ParallaxApp(App):
         self.root_path = global_context.scope_root  # For backwards compatibility with widgets
         self.command_handler = CommandHandler()
         self.yankboard = ""  # For yank/paste operations
-        self.feed_handler = FeedHandler(threshold=20, global_context=global_context)  # Trigger every 20 characters
+
+        # Generate user ID from global context
+        user_id = generate_user_id(global_context)
+        logger.info(f"Generated user ID: {user_id}")
+
+        self.feed_handler = FeedHandler(threshold=20, global_context=global_context, user_id=user_id)  # Trigger every 20 characters
         logger.debug("FeedHandler initialized")
 
     def compose(self) -> ComposeResult:

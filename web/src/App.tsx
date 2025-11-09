@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { EditorLayout } from './layouts/EditorLayout';
 import { FileExplorer } from './components/FileExplorer';
 import { PlanEditor } from './components/PlanEditor';
@@ -14,17 +14,28 @@ import { useFeedStore } from './stores/feedStore';
 import { useFileSystemStore } from './stores/fileSystemStore';
 import { CardType } from './types/models';
 import { config } from './utils/config';
+import { generateUserId } from './utils/userIdUtils';
 
 function App() {
-  // Generate or retrieve user ID
-  const userId = useMemo(() => {
-    const stored = localStorage.getItem('parallax_user_id');
-    if (stored) return stored;
+  // Get scope and plan from file system store
+  const { theme } = useUIStore();
+  const { addCards } = useFeedStore();
+  const { scopeRoot, planPath, setScopeRoot, setPlanPath } = useFileSystemStore();
 
-    const newId = `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    localStorage.setItem('parallax_user_id', newId);
-    return newId;
-  }, []);
+  // Generate user ID based on scope_root and plan_path
+  const [userId, setUserId] = useState<string>('user-loading');
+
+  // Update userId when scopeRoot or planPath changes
+  useEffect(() => {
+    const updateUserId = async () => {
+      const newUserId = await generateUserId({
+        scope_root: scopeRoot,
+        plan_path: planPath,
+      });
+      setUserId(newUserId);
+    };
+    updateUserId();
+  }, [scopeRoot, planPath]);
 
   // Set up keyboard shortcuts
   useKeyboardShortcuts();
@@ -39,10 +50,6 @@ function App() {
   const { loadFileTree, loadFile } = useFileSystem({
     enabled: config.enableBackend,
   });
-
-  const { theme } = useUIStore();
-  const { addCards } = useFeedStore();
-  const { setScopeRoot, setPlanPath } = useFileSystemStore();
 
   // Apply theme to document
   useEffect(() => {
