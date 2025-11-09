@@ -74,7 +74,7 @@ describe('BackendService', () => {
   });
 
   describe('getCached', () => {
-    it('should make GET request to /user/{id}/cached endpoint', async () => {
+    it('should make GET request to /cached/{id} endpoint', async () => {
       const mockResponse = {
         cards: [
           {
@@ -93,7 +93,7 @@ describe('BackendService', () => {
 
       const result = await service.getCached('test-user');
 
-      expect(global.fetch).toHaveBeenCalledWith('http://localhost:8000/user/test-user/cached');
+      expect(global.fetch).toHaveBeenCalledWith('http://localhost:8000/cached/test-user');
       expect(result).toEqual(mockResponse);
       expect(result.processing).toBe(false);
     });
