@@ -6,6 +6,8 @@ export enum CardType {
   QUESTION = 'question',
   CONTEXT = 'context',
   COMPLETION = 'completion',
+  MATH = 'math',
+  EMAIL = 'email',
 }
 
 export interface Card {
