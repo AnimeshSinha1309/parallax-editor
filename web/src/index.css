@@ -3,7 +3,24 @@
 @tailwind utilities;
 
 :root {
-  /* Light Theme - Color Hunt Palette */
+  /* Noctis Minimus Theme - Dark */
+  --bg-primary: #1b2932;
+  --bg-secondary: #17232b;
+  --bg-tertiary: #0e1920;
+  --text-primary: #c5cdd3;
+  --text-secondary: #5e7887;
+  --accent-blue: #72b7c0;
+  --accent-green: #72c09f;
+  --accent-yellow: #d3b692;
+  --accent-red: #b96346;
+  --accent-purple: #7068b1;
+  --accent-orange: #c37455;
+  --border: #2e4554;
+  --focus-border: #5998c0;
+}
+
+[data-theme='light'] {
+  /* Light Theme fallback */
   --bg-primary: #EFFFFB;
   --bg-secondary: #EFFFFB;
   --bg-tertiary: #F5FFFD;
@@ -17,23 +34,6 @@
   --accent-orange: #F97316;
   --border: #D5F5EC;
   --focus-border: #50D890;
-}
-
-[data-theme='dark'] {
-  /* Dark Theme - Black & Grey */
-  --bg-primary: #0a0a0a;
-  --bg-secondary: #0a0a0a;
-  --bg-tertiary: #121212;
-  --text-primary: #e8e8e8;
-  --text-secondary: #6b7280;
-  --accent-blue: #3b82f6;
-  --accent-green: #10b981;
-  --accent-yellow: #f59e0b;
-  --accent-red: #ef4444;
-  --accent-purple: #a855f7;
-  --accent-orange: #f97316;
-  --border: #1f1f1f;
-  --focus-border: #3b82f6;
 }
 
 * {
@@ -54,7 +54,7 @@ body {
   font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
-  font-weight: 500;
+  font-weight: 400;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--bg-primary);

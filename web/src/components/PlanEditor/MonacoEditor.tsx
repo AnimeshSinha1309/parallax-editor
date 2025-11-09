@@ -20,87 +20,50 @@ export function MonacoEditor() {
   const { currentCompletion } = useCompletionStore();
 
   const handleBeforeMount = (monaco: any) => {
-    // Define Monokai Pro theme (dark)
-    monaco.editor.defineTheme('monokai-pro', {
+    // Define Noctis Minimus theme
+    monaco.editor.defineTheme('noctis-minimus', {
       base: 'vs-dark',
       inherit: true,
       rules: [
-        { token: '', foreground: 'FCFCFA', background: '2D2A2E' },
-        { token: 'comment', foreground: '727072', fontStyle: 'italic' },
-        { token: 'keyword', foreground: 'FF6188' },
-        { token: 'keyword.control', foreground: 'FF6188' },
-        { token: 'keyword.operator', foreground: 'FF6188' },
-        { token: 'string', foreground: 'FFD866' },
-        { token: 'number', foreground: 'AB9DF2' },
-        { token: 'constant', foreground: 'AB9DF2' },
-        { token: 'type', foreground: '78DCE8', fontStyle: 'italic' },
-        { token: 'class', foreground: 'A9DC76' },
-        { token: 'function', foreground: 'A9DC76' },
-        { token: 'variable', foreground: 'FCFCFA' },
-        { token: 'variable.parameter', foreground: 'FC9867' },
-        { token: 'operator', foreground: 'FF6188' },
-        { token: 'delimiter', foreground: 'FCFCFA' },
+        { token: '', foreground: 'c5cdd3' },
+        { token: 'comment', foreground: '5e7887', fontStyle: 'italic' },
+        { token: 'keyword', foreground: 'c88da2' },
+        { token: 'keyword.control', foreground: 'c88da2' },
+        { token: 'keyword.operator', foreground: 'c88da2' },
+        { token: 'string', foreground: '72c09f' },
+        { token: 'string.interpolated', foreground: '3f8d6c' },
+        { token: 'number', foreground: '7068b1' },
+        { token: 'constant', foreground: 'a88c00' },
+        { token: 'type', foreground: 'be856f' },
+        { token: 'type.identifier', foreground: 'be856f' },
+        { token: 'class', foreground: '3f848d' },
+        { token: 'function', foreground: '3f848d' },
+        { token: 'variable', foreground: 'd3b692' },
+        { token: 'variable.parameter', foreground: 'd3b692' },
+        { token: 'operator', foreground: 'c88da2' },
+        { token: 'delimiter', foreground: 'c5cdd3' },
+        { token: 'tag', foreground: 'c37455' },
+        { token: 'support', foreground: '72b7c0' },
+        { token: 'invalid', foreground: 'b16a4e' },
       ],
       colors: {
-        'editor.background': '#2D2A2E',
-        'editor.foreground': '#FCFCFA',
-        'editorLineNumber.foreground': '#5B595C',
-        'editorLineNumber.activeForeground': '#C1C0C0',
-        'editor.selectionBackground': '#5B595C80',
-        'editor.inactiveSelectionBackground': '#5B595C40',
-        'editor.lineHighlightBackground': '#3E3B3F',
-        'editorCursor.foreground': '#FCFCFA',
-        'editorWhitespace.foreground': '#5B595C',
-        'editorIndentGuide.background': '#3E3B3F',
-        'editorIndentGuide.activeBackground': '#5B595C',
-        'editorRuler.foreground': '#3E3B3F',
-        'editorBracketMatch.background': '#5B595C',
-        'editorBracketMatch.border': '#727072',
-        'scrollbarSlider.background': '#5B595C80',
-        'scrollbarSlider.hoverBackground': '#5B595CA0',
-        'scrollbarSlider.activeBackground': '#5B595CC0',
-      },
-    });
-
-    // Define light theme that complements Color Hunt palette
-    monaco.editor.defineTheme('parallax-light', {
-      base: 'vs',
-      inherit: true,
-      rules: [
-        { token: '', foreground: '1a1a1a' },
-        { token: 'comment', foreground: '6b7280', fontStyle: 'italic' },
-        { token: 'keyword', foreground: 'FF6188' },
-        { token: 'keyword.control', foreground: 'FF6188' },
-        { token: 'keyword.operator', foreground: 'FF6188' },
-        { token: 'string', foreground: 'F59E0B' },
-        { token: 'number', foreground: 'A855F7' },
-        { token: 'constant', foreground: 'A855F7' },
-        { token: 'type', foreground: '4F98CA', fontStyle: 'italic' },
-        { token: 'class', foreground: '50D890' },
-        { token: 'function', foreground: '50D890' },
-        { token: 'variable', foreground: '1a1a1a' },
-        { token: 'variable.parameter', foreground: 'F97316' },
-        { token: 'operator', foreground: 'FF6188' },
-        { token: 'delimiter', foreground: '404040' },
-      ],
-      colors: {
-        'editor.background': '#FFFFFF',
-        'editor.foreground': '#1a1a1a',
-        'editorLineNumber.foreground': '#9ca3af',
-        'editorLineNumber.activeForeground': '#404040',
-        'editor.selectionBackground': '#D5F5EC',
-        'editor.inactiveSelectionBackground': '#EFFFFB',
-        'editor.lineHighlightBackground': '#F5FFFD',
-        'editorCursor.foreground': '#50D890',
-        'editorWhitespace.foreground': '#D5F5EC',
-        'editorIndentGuide.background': '#E5E7EB',
-        'editorIndentGuide.activeBackground': '#9ca3af',
-        'editorRuler.foreground': '#E5E7EB',
-        'editorBracketMatch.background': '#D5F5EC',
-        'editorBracketMatch.border': '#50D890',
-        'scrollbarSlider.background': '#D5F5EC80',
-        'scrollbarSlider.hoverBackground': '#50D89080',
-        'scrollbarSlider.activeBackground': '#50D890A0',
+        'editor.background': '#1b2932',
+        'editor.foreground': '#c5cdd3',
+        'editorLineNumber.foreground': '#5d6e79',
+        'editorLineNumber.activeForeground': '#6496b4',
+        'editor.selectionBackground': '#496d8355',
+        'editor.inactiveSelectionBackground': '#496d8320',
+        'editor.lineHighlightBackground': '#1f3240',
+        'editorCursor.foreground': '#b3d2e6',
+        'editorWhitespace.foreground': '#5d6e7944',
+        'editorIndentGuide.background': '#2e4554',
+        'editorIndentGuide.activeBackground': '#5d6e79',
+        'editorRuler.foreground': '#2e4554',
+        'editorBracketMatch.background': '#496d8366',
+        'editorBracketMatch.border': '#5998c0',
+        'scrollbarSlider.background': '#5d6e7966',
+        'scrollbarSlider.hoverBackground': '#5d6e7999',
+        'scrollbarSlider.activeBackground': '#5998c0bb',
       },
     });
   };
@@ -148,8 +111,8 @@ export function MonacoEditor() {
     };
   }, []);
 
-  // Use theme based on UI theme: Monokai Pro for dark, custom light theme for light
-  const monacoTheme = theme === 'dark' ? 'monokai-pro' : 'parallax-light';
+  // Use Noctis Minimus theme
+  const monacoTheme = 'noctis-minimus';
 
   return (
     <div
@@ -166,7 +129,8 @@ export function MonacoEditor() {
         onMount={handleEditorDidMount}
         options={{
           fontSize: 14,
-          fontFamily: 'Cascadia Code, Fira Code, Consolas, Monaco, monospace',
+          fontFamily: 'Fira Code, Cascadia Code, Consolas, Monaco, monospace',
+          fontLigatures: true,
           minimap: { enabled: true },
           lineNumbers: 'on',
           rulers: [80],

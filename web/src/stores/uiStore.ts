@@ -54,7 +54,7 @@ export const useUIStore = create<UIStore>((set) => ({
   setVimCommand: (command: string) => set({ vimCommand: command }),
 
   // Theme
-  theme: 'light',
+  theme: 'dark',
   toggleTheme: () =>
     set((state) => ({ theme: state.theme === 'dark' ? 'light' : 'dark' })),
 }));

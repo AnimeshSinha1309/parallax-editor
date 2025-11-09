@@ -7,20 +7,20 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Light theme colors - Color Hunt Palette
-        'vscode-bg-primary': '#EFFFFB',
-        'vscode-bg-secondary': '#EFFFFB',
-        'vscode-bg-tertiary': '#F5FFFD',
-        'vscode-text-primary': '#1a1a1a',
-        'vscode-text-secondary': '#404040',
-        'vscode-accent-blue': '#4F98CA',
-        'vscode-accent-green': '#50D890',
-        'vscode-accent-yellow': '#F59E0B',
-        'vscode-accent-red': '#EF4444',
-        'vscode-accent-purple': '#A855F7',
-        'vscode-accent-orange': '#F97316',
-        'vscode-border': '#D5F5EC',
-        'vscode-focus-border': '#50D890',
+        // Noctis Minimus Theme - Dark
+        'vscode-bg-primary': '#1b2932',
+        'vscode-bg-secondary': '#17232b',
+        'vscode-bg-tertiary': '#0e1920',
+        'vscode-text-primary': '#c5cdd3',
+        'vscode-text-secondary': '#5e7887',
+        'vscode-accent-blue': '#72b7c0',
+        'vscode-accent-green': '#72c09f',
+        'vscode-accent-yellow': '#d3b692',
+        'vscode-accent-red': '#b96346',
+        'vscode-accent-purple': '#7068b1',
+        'vscode-accent-orange': '#c37455',
+        'vscode-border': '#2e4554',
+        'vscode-focus-border': '#5998c0',
       },
       fontFamily: {
         'sans': ['Montserrat', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],

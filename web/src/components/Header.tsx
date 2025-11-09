@@ -18,7 +18,7 @@ export function Header() {
         className="p-1.5 hover:bg-vscode-bg-tertiary transition-colors text-vscode-text-secondary hover:text-vscode-text-primary"
         aria-label="Toggle theme"
       >
-        {theme === 'light' ? <Moon size={14} /> : <Sun size={14} />}
+        {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
       </button>
     </div>
   );
