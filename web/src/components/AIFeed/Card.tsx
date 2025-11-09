@@ -1,5 +1,7 @@
 import { X, HelpCircle, Info, Lightbulb, Sigma, Mail } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeMathjax from 'rehype-mathjax/svg';
 import { useFeedStore } from '../../stores/feedStore';
 import type { Card as CardModel } from '../../types/models';
 import { CardType } from '../../types/models';
@@ -72,6 +74,8 @@ export function Card({ card }: CardProps) {
       <div className="px-3 py-2 text-sm text-vscode-text-primary">
         <ReactMarkdown
           className="markdown-content"
+          remarkPlugins={[remarkMath]}
+          rehypePlugins={[rehypeMathjax]}
           components={{
             p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
             code: ({ children }) => (

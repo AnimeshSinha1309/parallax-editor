@@ -137,3 +137,32 @@ code {
 .card-completion {
   border-left: 3px solid var(--accent-green);
 }
+
+.card-math {
+  border-left: 3px solid #c586c0; /* Purple accent */
+}
+
+.card-email {
+  border-left: 3px solid #ce9178; /* Orange accent */
+}
+
+/* MathJax rendering styles */
+.markdown-content mjx-container {
+  display: inline-block;
+  margin: 0.5em 0;
+}
+
+.markdown-content mjx-container[display="true"] {
+  display: block;
+  text-align: center;
+  margin: 1em 0;
+}
+
+/* Ensure MathJax formulas are visible in dark theme */
+.markdown-content mjx-container svg {
+  color: var(--text-primary);
+}
+
+.markdown-content mjx-container mjx-math {
+  color: var(--text-primary);
+}
