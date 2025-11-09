@@ -20,7 +20,7 @@ export function MonacoEditor() {
   const { currentCompletion } = useCompletionStore();
 
   const handleBeforeMount = (monaco: any) => {
-    // Define Monokai Pro theme
+    // Define Monokai Pro theme (dark)
     monaco.editor.defineTheme('monokai-pro', {
       base: 'vs-dark',
       inherit: true,
@@ -59,6 +59,48 @@ export function MonacoEditor() {
         'scrollbarSlider.background': '#5B595C80',
         'scrollbarSlider.hoverBackground': '#5B595CA0',
         'scrollbarSlider.activeBackground': '#5B595CC0',
+      },
+    });
+
+    // Define light theme that complements Color Hunt palette
+    monaco.editor.defineTheme('parallax-light', {
+      base: 'vs',
+      inherit: true,
+      rules: [
+        { token: '', foreground: '1a1a1a' },
+        { token: 'comment', foreground: '6b7280', fontStyle: 'italic' },
+        { token: 'keyword', foreground: 'FF6188' },
+        { token: 'keyword.control', foreground: 'FF6188' },
+        { token: 'keyword.operator', foreground: 'FF6188' },
+        { token: 'string', foreground: 'F59E0B' },
+        { token: 'number', foreground: 'A855F7' },
+        { token: 'constant', foreground: 'A855F7' },
+        { token: 'type', foreground: '4F98CA', fontStyle: 'italic' },
+        { token: 'class', foreground: '50D890' },
+        { token: 'function', foreground: '50D890' },
+        { token: 'variable', foreground: '1a1a1a' },
+        { token: 'variable.parameter', foreground: 'F97316' },
+        { token: 'operator', foreground: 'FF6188' },
+        { token: 'delimiter', foreground: '404040' },
+      ],
+      colors: {
+        'editor.background': '#FFFFFF',
+        'editor.foreground': '#1a1a1a',
+        'editorLineNumber.foreground': '#9ca3af',
+        'editorLineNumber.activeForeground': '#404040',
+        'editor.selectionBackground': '#D5F5EC',
+        'editor.inactiveSelectionBackground': '#EFFFFB',
+        'editor.lineHighlightBackground': '#F5FFFD',
+        'editorCursor.foreground': '#50D890',
+        'editorWhitespace.foreground': '#D5F5EC',
+        'editorIndentGuide.background': '#E5E7EB',
+        'editorIndentGuide.activeBackground': '#9ca3af',
+        'editorRuler.foreground': '#E5E7EB',
+        'editorBracketMatch.background': '#D5F5EC',
+        'editorBracketMatch.border': '#50D890',
+        'scrollbarSlider.background': '#D5F5EC80',
+        'scrollbarSlider.hoverBackground': '#50D89080',
+        'scrollbarSlider.activeBackground': '#50D890A0',
       },
     });
   };
@@ -106,8 +148,8 @@ export function MonacoEditor() {
     };
   }, []);
 
-  // Use Monokai Pro theme for the editor
-  const monacoTheme = 'monokai-pro';
+  // Use theme based on UI theme: Monokai Pro for dark, custom light theme for light
+  const monacoTheme = theme === 'dark' ? 'monokai-pro' : 'parallax-light';
 
   return (
     <div
