@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 
 export type PaneType = 'files' | 'editor' | 'feed';
+export type MobileViewType = 'editor' | 'feed';
 
 interface UIStore {
   // Focus management
@@ -12,6 +13,10 @@ interface UIStore {
   rightPanelVisible: boolean;
   toggleLeftPanel: () => void;
   toggleRightPanel: () => void;
+
+  // Mobile view state
+  mobileView: MobileViewType;
+  toggleMobileView: () => void;
 
   // Command systems
   commandPaletteOpen: boolean;
@@ -40,6 +45,13 @@ export const useUIStore = create<UIStore>((set) => ({
     set((state) => ({ leftPanelVisible: !state.leftPanelVisible })),
   toggleRightPanel: () =>
     set((state) => ({ rightPanelVisible: !state.rightPanelVisible })),
+
+  // Mobile view state
+  mobileView: 'editor',
+  toggleMobileView: () =>
+    set((state) => ({
+      mobileView: state.mobileView === 'editor' ? 'feed' : 'editor',
+    })),
 
   // Command systems
   commandPaletteOpen: false,
