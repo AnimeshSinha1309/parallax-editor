@@ -10,6 +10,7 @@ class CardType(Enum):
     QUESTION = "question"      # Clarifying questions for the user
     CONTEXT = "context"        # Contextual information (similar code, docs, etc.)
     COMPLETION = "completion"  # Inline completion suggestions (for ghost text)
+    MATH = "math"              # MathJax-equation suggestions or fixes
 
 
 @dataclass
@@ -23,7 +24,7 @@ class Card:
 
     header: str  # Title or header text for the card
     text: str  # Main content text
-    type: CardType  # Type of card (QUESTION, CONTEXT, or COMPLETION)
+    type: CardType  # Type of card (QUESTION, CONTEXT, COMPLETION, or MATH)
     metadata: Dict[str, Any] = field(default_factory=dict)  # Additional metadata
 
     # Future extensions can be added here:

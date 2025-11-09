@@ -16,6 +16,7 @@ from typing import List, Dict, Any
 from shared.models import Card, CardType
 from shared.context import GlobalPreferenceContext
 from parallizer.fulfillers.completions.completions import Completions
+from parallizer.fulfillers.mathjax.mathjax import MathJax
 from parallizer.fulfillers.ambiguities.ambiguities import Ambiguities
 from parallizer.fulfillers.web_context.web_context import WebContext
 from parallizer.fulfillers.codesearch.search import CodeSearch
@@ -183,7 +184,24 @@ class FulfillerBenchmark:
                 "error": str(e)
             })
 
-        # 2. Ambiguities Fulfiller
+        # 2. MathJax Fulfiller
+        try:
+            mathjax = MathJax()
+            result = await self.benchmark_fulfiller(
+                "MathJax (Equation Completion)",
+                mathjax,
+                cursor_position=(18, 0)  # Near math sections (if any)
+            )
+            results.append(result)
+        except Exception as e:
+            print(f"\n✗ Failed to initialize MathJax: {e}")
+            results.append({
+                "name": "MathJax",
+                "available": False,
+                "error": str(e)
+            })
+
+        # 3. Ambiguities Fulfiller
         try:
             ambiguities = Ambiguities()
             result = await self.benchmark_fulfiller(
@@ -200,7 +218,7 @@ class FulfillerBenchmark:
                 "error": str(e)
             })
 
-        # 3. WebContext Fulfiller
+        # 4. WebContext Fulfiller
         try:
             web_context = WebContext()
             result = await self.benchmark_fulfiller(
@@ -217,7 +235,7 @@ class FulfillerBenchmark:
                 "error": str(e)
             })
 
-        # 4. CodeSearch Fulfiller
+        # 5. CodeSearch Fulfiller
         try:
             code_search = CodeSearch()
             result = await self.benchmark_fulfiller(

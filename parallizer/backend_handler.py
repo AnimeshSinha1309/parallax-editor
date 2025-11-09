@@ -31,6 +31,7 @@ from parallizer.fulfillers.completions.completions import Completions
 from parallizer.fulfillers.ambiguities.ambiguities import Ambiguities
 from parallizer.fulfillers.web_context.web_context import WebContext
 from parallizer.fulfillers.codesearch.search import CodeSearch
+from parallizer.fulfillers.mathjax.mathjax import MathJax
 from parallizer.utils import get_lm
 from parallizer.utils.file_manager import FileSystemManager, PathValidator
 
@@ -160,6 +161,9 @@ def initialize_fulfillers():
         completions = Completions()
         logger.info("Completions fulfiller initialized")
 
+        mathjax = MathJax()
+        logger.info("MathJax fulfiller initialized")
+
         ambiguities = Ambiguities()
         logger.info("Ambiguities fulfiller initialized")
 
@@ -170,7 +174,7 @@ def initialize_fulfillers():
         logger.info("CodeSearch fulfiller initialized")
 
         # Register all fulfillers
-        fulfillers = [completions, ambiguities, web_context, code_search]
+        fulfillers = [completions, mathjax, ambiguities, web_context, code_search]
 
         logger.info(f"Successfully initialized {len(fulfillers)} fulfillers")
 

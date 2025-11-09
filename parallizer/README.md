@@ -5,7 +5,7 @@ Parallizer is the backend server for the Parallax Editor, providing AI-powered c
 ## Architecture
 
 The backend includes:
-- **Fulfillers**: AI services for completions, ambiguities, web context, and code search
+- **Fulfillers**: AI services for completions, MathJax equation fixes, ambiguities, web context, and code search
 - **Signatures**: DSPy signatures for LLM prompts
 - **Utils**: Shared utilities (LM service, ripgrep, perplexity, query cache)
 
@@ -97,6 +97,7 @@ The server maintains feed state per `user_id` with no authentication required. E
 - Up to 3 COMPLETION cards
 - Up to 3 QUESTION cards
 - Up to 3 CONTEXT cards
+- Up to 3 MATH cards
 
 Older cards are automatically removed when limits are exceeded.
 
