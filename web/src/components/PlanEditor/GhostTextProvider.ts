@@ -45,6 +45,13 @@ export class GhostTextProvider implements languages.InlineCompletionsProvider {
   freeInlineCompletions(): void {
     // No cleanup needed for now
   }
+
+  /**
+   * Dispose inline completions (cleanup method for newer Monaco versions)
+   */
+  disposeInlineCompletions?(): void {
+    // No cleanup needed for now
+  }
 }
 
 /**
