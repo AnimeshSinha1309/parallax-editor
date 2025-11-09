@@ -146,23 +146,18 @@ code {
   border-left: 3px solid #ce9178; /* Orange accent */
 }
 
-/* MathJax rendering styles */
-.markdown-content mjx-container {
-  display: inline-block;
-  margin: 0.5em 0;
+/* KaTeX rendering styles */
+.markdown-content .katex {
+  font-size: 1.1em;
 }
 
-.markdown-content mjx-container[display="true"] {
-  display: block;
-  text-align: center;
+.markdown-content .katex-display {
   margin: 1em 0;
+  text-align: center;
 }
 
-/* Ensure MathJax formulas are visible in dark theme */
-.markdown-content mjx-container svg {
-  color: var(--text-primary);
-}
-
-.markdown-content mjx-container mjx-math {
-  color: var(--text-primary);
+/* Ensure KaTeX formulas are visible in dark theme */
+.markdown-content .katex,
+.markdown-content .katex * {
+  color: var(--text-primary) !important;
 }
