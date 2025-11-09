@@ -2,16 +2,9 @@
  * Application configuration
  */
 
-// Get backend port from URL query parameter
-function getBackendUrl(): string {
-  const urlParams = new URLSearchParams(window.location.search);
-  const backendPort = urlParams.get('backend_port') || '8000';
-  return `http://localhost:${backendPort}`;
-}
-
 export const config = {
-  // Backend API URL (determined from URL query parameter)
-  backendUrl: getBackendUrl(),
+  // Backend API URL (uses port from dev script --backend_port argument)
+  backendUrl: `http://localhost:${__BACKEND_PORT__}`,
 
   // Feature flags (backend always enabled)
   enableBackend: true,
