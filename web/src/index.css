@@ -3,32 +3,33 @@
 @tailwind utilities;
 
 :root {
-  /* VS Code Dark Theme Colors */
-  --bg-primary: #1e1e1e;
-  --bg-secondary: #252526;
-  --bg-tertiary: #2d2d30;
-  --text-primary: #cccccc;
-  --text-secondary: #969696;
-  --accent-blue: #007acc;
-  --accent-green: #89d185;
-  --accent-yellow: #dcdcaa;
-  --accent-red: #f48771;
-  --border: #3e3e42;
-  --focus-border: #007acc;
+  /* Beautified Dark Theme - Black & Grey */
+  --bg-primary: #0a0a0a;
+  --bg-secondary: #121212;
+  --bg-tertiary: #1a1a1a;
+  --text-primary: #e8e8e8;
+  --text-secondary: #9ca3af;
+  --accent-blue: #3b82f6;
+  --accent-green: #10b981;
+  --accent-yellow: #f59e0b;
+  --accent-red: #ef4444;
+  --border: #27272a;
+  --focus-border: #3b82f6;
 }
 
 [data-theme='light'] {
+  /* Beautified Light Theme - White & Grey */
   --bg-primary: #ffffff;
-  --bg-secondary: #f3f3f3;
-  --bg-tertiary: #e8e8e8;
-  --text-primary: #333333;
-  --text-secondary: #666666;
-  --accent-blue: #007acc;
-  --accent-green: #4caf50;
-  --accent-yellow: #ff9800;
-  --accent-red: #f44336;
-  --border: #d4d4d4;
-  --focus-border: #007acc;
+  --bg-secondary: #f9fafb;
+  --bg-tertiary: #f3f4f6;
+  --text-primary: #111827;
+  --text-secondary: #6b7280;
+  --accent-blue: #2563eb;
+  --accent-green: #059669;
+  --accent-yellow: #d97706;
+  --accent-red: #dc2626;
+  --border: #e5e7eb;
+  --focus-border: #2563eb;
 }
 
 * {
@@ -46,7 +47,7 @@ body,
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+  font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -139,11 +140,11 @@ code {
 }
 
 .card-math {
-  border-left: 3px solid #c586c0; /* Purple accent */
+  border-left: 3px solid #a855f7; /* Purple accent */
 }
 
 .card-email {
-  border-left: 3px solid #ce9178; /* Orange accent */
+  border-left: 3px solid #f97316; /* Orange accent */
 }
 
 /* KaTeX rendering styles */

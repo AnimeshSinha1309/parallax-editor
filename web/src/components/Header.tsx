@@ -8,8 +8,8 @@ export function Header() {
     <div className="h-full flex items-center justify-between px-4 bg-vscode-bg-secondary">
       <div className="flex items-center gap-3">
         <FileCode2 size={20} className="text-vscode-accent-blue" />
-        <span className="text-sm font-semibold text-vscode-text-primary">
-          Parallax Editor
+        <span className="text-lg font-light text-vscode-text-primary tracking-tight">
+          parallax.
         </span>
       </div>
 
