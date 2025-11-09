@@ -1829,10 +1829,12 @@ name = "parallax-code-search"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "aiohttp" },
     { name = "dspy" },
     { name = "fastapi" },
     { name = "httpx" },
     { name = "persist-cache" },
+    { name = "pydantic" },
     { name = "python-dotenv" },
     { name = "requests" },
     { name = "textual" },
@@ -1852,10 +1854,12 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "aiohttp", specifier = ">=3.9.0" },
     { name = "dspy", specifier = ">=3.0.0" },
     { name = "fastapi", specifier = ">=0.121.0" },
     { name = "httpx", specifier = ">=0.26.0" },
     { name = "persist-cache", specifier = ">=0.4.4" },
+    { name = "pydantic", specifier = ">=2.0.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.23.0" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
