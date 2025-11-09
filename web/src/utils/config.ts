@@ -3,11 +3,11 @@
  */
 
 export const config = {
-  // Backend API URL
-  backendUrl: import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000',
+  // Backend API URL (uses port from dev script --backend_port argument)
+  backendUrl: `http://localhost:${__BACKEND_PORT__}`,
 
-  // Feature flags
-  enableBackend: import.meta.env.VITE_ENABLE_BACKEND === 'true',
+  // Feature flags (backend always enabled)
+  enableBackend: true,
 
   // Fulfillment settings (matching CLI behavior)
   fulfillment: {
