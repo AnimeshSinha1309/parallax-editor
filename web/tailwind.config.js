@@ -16,6 +16,8 @@ export default {
         'vscode-accent-green': '#89d185',
         'vscode-accent-yellow': '#dcdcaa',
         'vscode-accent-red': '#f48771',
+        'vscode-accent-purple': '#c586c0',
+        'vscode-accent-orange': '#ce9178',
         'vscode-border': '#3e3e42',
         'vscode-focus-border': '#007acc',
       },

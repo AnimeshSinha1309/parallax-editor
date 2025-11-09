@@ -352,7 +352,7 @@ class FeedHandler:
 
         # Separate by type
         completion_cards = [c for c in cards if c.type == CardType.COMPLETION]
-        feed_cards = [c for c in cards if c.type in (CardType.QUESTION, CardType.CONTEXT)]
+        feed_cards = [c for c in cards if c.type in (CardType.QUESTION, CardType.CONTEXT, CardType.MATH, CardType.EMAIL)]
 
         # Update ghost text if we have completions
         if completion_cards and self.text_editor:

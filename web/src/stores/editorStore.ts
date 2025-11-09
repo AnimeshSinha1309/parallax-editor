@@ -11,7 +11,7 @@ interface EditorStore extends EditorState {
 }
 
 const initialState: EditorState = {
-  content: '# Welcome to Parallax\n\nStart editing your plan document here...',
+  content: '',
   cursorPosition: [0, 0],
   language: 'markdown',
   filePath: undefined,

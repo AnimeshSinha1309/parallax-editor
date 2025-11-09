@@ -1,4 +1,4 @@
-import { X, HelpCircle, Info, Lightbulb } from 'lucide-react';
+import { X, HelpCircle, Info, Lightbulb, Sigma, Mail } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { useFeedStore } from '../../stores/feedStore';
 import type { Card as CardModel } from '../../types/models';
@@ -13,12 +13,16 @@ const CARD_ICONS = {
   [CardType.QUESTION]: HelpCircle,
   [CardType.CONTEXT]: Info,
   [CardType.COMPLETION]: Lightbulb,
+  [CardType.MATH]: Sigma,
+  [CardType.EMAIL]: Mail,
 };
 
 const CARD_COLORS = {
   [CardType.QUESTION]: 'text-vscode-accent-yellow',
   [CardType.CONTEXT]: 'text-vscode-accent-blue',
   [CardType.COMPLETION]: 'text-vscode-accent-green',
+  [CardType.MATH]: 'text-vscode-accent-purple',
+  [CardType.EMAIL]: 'text-vscode-accent-orange',
 };
 
 export function Card({ card }: CardProps) {

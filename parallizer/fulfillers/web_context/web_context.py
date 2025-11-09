@@ -6,7 +6,7 @@ from parallizer.signatures.web_context_card_signature import WebContextCardSigna
 from parallizer.fulfillers.base import Fulfiller
 from shared.models import Card, CardType
 from shared.context import GlobalPreferenceContext
-from parallizer.utils.perplexity import PerplexitySearch, SearchResponse
+from parallizer.utils.google_search import GoogleSearch, SearchResponse
 from typing import List, Tuple, Optional
 from abc import ABCMeta
 from pathlib import Path
@@ -28,7 +28,7 @@ class WebContext(Fulfiller, dspy.Module, metaclass=CombinedMeta):
 
     Uses DSPy to:
     1. Generate intelligent web search queries based on the current document
-    2. Perform web searches using Perplexity to find relevant external context
+    2. Perform web searches using Google Search to find relevant external context
     3. Analyze search results and distill them into concise context cards
     """
 
@@ -43,7 +43,7 @@ class WebContext(Fulfiller, dspy.Module, metaclass=CombinedMeta):
             logger.warning("No LM available for WebContext fulfiller")
         self.query_generator = dspy.Predict(WebQueryGenerator)
         self.context_card_generator = dspy.Predict(WebContextCardSignature)
-        self.search_backend = PerplexitySearch()
+        self.search_backend = GoogleSearch()
 
     async def forward(
         self,
@@ -201,7 +201,7 @@ class WebContext(Fulfiller, dspy.Module, metaclass=CombinedMeta):
         """Check if web context fulfiller is available."""
         from parallizer.utils import get_lm
         lm_available = get_lm() is not None
-        perplexity_available = await self.search_backend.is_available()
-        available = lm_available and perplexity_available
-        logger.info(f"WebContext fulfiller availability check: LM={lm_available}, Perplexity={perplexity_available}, overall={available}")
+        google_available = await self.search_backend.is_available()
+        available = lm_available and google_available
+        logger.info(f"WebContext fulfiller availability check: LM={lm_available}, Google={google_available}, overall={available}")
         return available

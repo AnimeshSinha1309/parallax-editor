@@ -48,11 +48,11 @@ export class BackendService {
   }
 
   /**
-   * GET /user/{user_id}/cached - Poll for incremental updates
+   * GET /cached/{user_id} - Poll for incremental updates
    * Returns current cached cards + processing status
    */
   async getCached(userId: string): Promise<FulfillResponseWithStatus> {
-    const response = await fetch(`${this.baseUrl}/user/${userId}/cached`);
+    const response = await fetch(`${this.baseUrl}/cached/${userId}`);
 
     if (!response.ok) {
       throw new Error(`Get cached failed: ${response.status} ${response.statusText}`);

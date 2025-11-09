@@ -32,7 +32,7 @@ export function useFulfillment({ userId, enabled = true }: UseFulfillmentOptions
     // Separate cards by type
     const completions = cards.filter((c) => c.type === CardType.COMPLETION);
     const feedCards = cards.filter(
-      (c) => c.type === CardType.QUESTION || c.type === CardType.CONTEXT
+      (c) => c.type === CardType.QUESTION || c.type === CardType.CONTEXT || c.type === CardType.MATH || c.type === CardType.EMAIL
     );
 
     // Update completion store (only first completion)

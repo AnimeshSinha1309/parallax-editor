@@ -11,6 +11,7 @@ class CardType(Enum):
     CONTEXT = "context"        # Contextual information (similar code, docs, etc.)
     COMPLETION = "completion"  # Inline completion suggestions (for ghost text)
     MATH = "math"              # MathJax-equation suggestions or fixes
+    EMAIL = "email"            # Email content from mailbox relevant to current task
 
 
 @dataclass
