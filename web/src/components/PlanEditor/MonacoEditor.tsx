@@ -1,4 +1,4 @@
-import Editor, { BeforeMount } from '@monaco-editor/react';
+import Editor from '@monaco-editor/react';
 import { useRef, useEffect } from 'react';
 import { useEditorStore } from '../../stores/editorStore';
 import { useUIStore } from '../../stores/uiStore';
@@ -19,7 +19,7 @@ export function MonacoEditor() {
   const { focusPane, theme } = useUIStore();
   const { currentCompletion } = useCompletionStore();
 
-  const handleBeforeMount: BeforeMount = (monaco) => {
+  const handleBeforeMount = (monaco: any) => {
     // Define Monokai Pro theme
     monaco.editor.defineTheme('monokai-pro', {
       base: 'vs-dark',
