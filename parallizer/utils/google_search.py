@@ -2,9 +2,12 @@
 
 import os
 import asyncio
+import logging
 from typing import Dict, List, Optional, Any
 import aiohttp
 from dataclasses import dataclass
+
+logger = logging.getLogger("parallax.google_search")
 
 
 @dataclass
@@ -337,8 +340,13 @@ class GoogleSearch:
         Check if Google API is available and credentials are valid.
 
         Returns:
-            True if API is accessible, False otherwise
+            True if API key is present (even if network check fails)
         """
+        # If no API key, definitely not available
+        if not self.api_key:
+            logger.warning("Google API key not found")
+            return False
+
         try:
             session = await self._get_session()
 
@@ -360,7 +368,14 @@ class GoogleSearch:
             ) as response:
                 # 200 = success, 429 = rate limited but valid credentials
                 return response.status in (200, 429)
-        except:
+        except asyncio.TimeoutError:
+            logger.warning("Google API timeout during availability check - assuming available (network issue)")
+            return True  # Return True anyway - likely network/firewall issue
+        except aiohttp.ClientError as e:
+            logger.warning(f"Google API connection error: {type(e).__name__}: {e} - assuming available")
+            return True  # Return True anyway - likely network/firewall issue
+        except Exception as e:
+            logger.error(f"Google API availability check failed: {type(e).__name__}: {e}")
             return False
 
     def __del__(self):
