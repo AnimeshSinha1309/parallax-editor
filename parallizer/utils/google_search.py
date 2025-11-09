@@ -371,6 +371,9 @@ class GoogleSearch:
         except asyncio.TimeoutError:
             logger.warning("Google API timeout during availability check - assuming available (network issue)")
             return True  # Return True anyway - likely network/firewall issue
+        except aiohttp.ServerDisconnectedError:
+            logger.warning("Google API server disconnected during availability check - assuming available (network/firewall issue)")
+            return True  # Return True anyway - network is blocking connection
         except aiohttp.ClientError as e:
             logger.warning(f"Google API connection error: {type(e).__name__}: {e} - assuming available")
             return True  # Return True anyway - likely network/firewall issue

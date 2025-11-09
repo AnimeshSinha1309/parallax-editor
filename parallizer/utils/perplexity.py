@@ -277,6 +277,9 @@ class PerplexitySearch:
         except asyncio.TimeoutError:
             logger.warning("Perplexity API timeout during availability check - assuming available (network issue)")
             return True  # Return True anyway - likely network/firewall issue
+        except aiohttp.ServerDisconnectedError:
+            logger.warning("Perplexity API server disconnected during availability check - assuming available (network/firewall issue)")
+            return True  # Return True anyway - network is blocking connection
         except aiohttp.ClientError as e:
             logger.warning(f"Perplexity API connection error: {type(e).__name__}: {e} - assuming available")
             return True  # Return True anyway - likely network/firewall issue
