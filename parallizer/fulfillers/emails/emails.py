@@ -10,7 +10,6 @@ from abc import ABCMeta
 from pathlib import Path
 import dspy
 import logging
-import mailbox
 
 logger = logging.getLogger("parallax.emails")
 
@@ -56,57 +55,57 @@ class EmailsFulfiller(Fulfiller, dspy.Module, metaclass=CombinedMeta):
 
     def _load_mbox_file(self, scope_root: str) -> List[str]:
         """
-        Load emails from mbox file.
+        Load emails from simple text file.
 
         Args:
-            scope_root: Root directory where mbox file should be located
+            scope_root: Root directory where email file should be located
 
         Returns:
-            List of email strings (formatted as "From: X, Subject: Y, Body: Z")
+            List of email strings (formatted as "To: X, Subject: Y")
         """
-        mbox_path = Path(scope_root) / self.mbox_filename
+        email_file_path = Path(scope_root) / self.mbox_filename
         emails = []
 
         try:
-            if not mbox_path.exists():
-                logger.warning(f"Mbox file not found: {mbox_path}")
+            if not email_file_path.exists():
+                logger.warning(f"Email file not found: {email_file_path}")
                 return emails
 
-            logger.info(f"Loading emails from: {mbox_path}")
-            mbox = mailbox.mbox(str(mbox_path))
+            logger.info(f"Loading emails from: {email_file_path}")
 
-            for message in mbox:
-                # Extract email components
-                from_addr = message.get('From', 'Unknown')
-                subject = message.get('Subject', 'No Subject')
+            with open(email_file_path, 'r', encoding='utf-8') as f:
+                for line_num, line in enumerate(f, 1):
+                    line = line.strip()
+                    if not line:
+                        continue
 
-                # Get email body
-                body = ""
-                if message.is_multipart():
-                    # Handle multipart messages
-                    for part in message.walk():
-                        if part.get_content_type() == "text/plain":
-                            try:
-                                body = part.get_payload(decode=True).decode('utf-8', errors='ignore')
-                                break
-                            except Exception as e:
-                                logger.debug(f"Error decoding email part: {e}")
-                else:
-                    # Handle simple text messages
-                    try:
-                        body = message.get_payload(decode=True).decode('utf-8', errors='ignore')
-                    except Exception as e:
-                        logger.debug(f"Error decoding email: {e}")
-                        body = str(message.get_payload())
+                    # Parse format: to:address@example.com Title of the Email
+                    if line.startswith('to:'):
+                        # Remove 'to:' prefix
+                        content = line[3:]
 
-                # Format email as string (truncate body to 500 chars for context window)
-                email_str = f"From: {from_addr}\nSubject: {subject}\nBody: {body[:500]}"
-                emails.append(email_str)
+                        # Split on first space to separate email from subject
+                        parts = content.split(' ', 1)
+                        if len(parts) >= 2:
+                            email_addr = parts[0]
+                            subject = parts[1]
+                        elif len(parts) == 1:
+                            email_addr = parts[0]
+                            subject = "No Subject"
+                        else:
+                            logger.warning(f"Skipping malformed line {line_num}: {line}")
+                            continue
 
-            logger.info(f"Loaded {len(emails)} emails from mbox file")
+                        # Format email as string
+                        email_str = f"To: {email_addr}\nSubject: {subject}"
+                        emails.append(email_str)
+                    else:
+                        logger.warning(f"Skipping invalid line {line_num} (doesn't start with 'to:'): {line}")
+
+            logger.info(f"Loaded {len(emails)} emails from file")
 
         except Exception as e:
-            logger.error(f"Error loading mbox file: {e}", exc_info=True)
+            logger.error(f"Error loading email file: {e}", exc_info=True)
 
         return emails
 
