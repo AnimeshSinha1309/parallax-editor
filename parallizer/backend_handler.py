@@ -9,6 +9,7 @@ This module provides a FastAPI server that:
 5. Returns card objects as JSON
 """
 
+import argparse
 import asyncio
 import logging
 import os
@@ -708,15 +709,27 @@ async def save_file(request: FileSaveRequest):
 
 def main():
     """Run the Parallizer backend server"""
-    port = int(os.getenv("PARALLIZER_PORT", "8000"))
-    host = os.getenv("PARALLIZER_HOST", "0.0.0.0")
+    parser = argparse.ArgumentParser(description="Parallizer Backend Server")
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=int(os.getenv("PARALLIZER_PORT", "8000")),
+        help="Port to run the backend server on (default: 8000 or PARALLIZER_PORT env var)"
+    )
+    parser.add_argument(
+        "--host",
+        type=str,
+        default=os.getenv("PARALLIZER_HOST", "0.0.0.0"),
+        help="Host to bind the backend server to (default: 0.0.0.0 or PARALLIZER_HOST env var)"
+    )
+    args = parser.parse_args()
 
-    logger.info(f"Starting server on {host}:{port}")
+    logger.info(f"Starting server on {args.host}:{args.port}")
 
     uvicorn.run(
         app,
-        host=host,
-        port=port,
+        host=args.host,
+        port=args.port,
         log_level="info"
     )
 
