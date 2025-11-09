@@ -33,7 +33,7 @@ export function AIFeed() {
       {/* Header */}
       <div className="px-3 py-2 border-b border-vscode-border flex items-center justify-between">
         <h2 className="text-xs font-medium text-vscode-text-secondary flex items-center gap-1.5">
-          <Sparkles size={12} />
+          <Sparkles size={12} className="text-vscode-accent-green" />
           AI Feed
         </h2>
         {cards.length > 0 && (

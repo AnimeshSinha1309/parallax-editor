@@ -99,7 +99,7 @@ export function VimCommandBar() {
 
   return (
     <div className="h-full flex items-center px-3 bg-vscode-bg-primary">
-      <span className="text-vscode-accent-blue font-medium mr-1.5">:</span>
+      <span className="text-vscode-accent-green font-medium mr-1.5">:</span>
       <input
         ref={inputRef}
         type="text"

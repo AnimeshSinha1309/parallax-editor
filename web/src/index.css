@@ -3,7 +3,24 @@
 @tailwind utilities;
 
 :root {
-  /* Beautified Dark Theme - Black & Grey */
+  /* Light Theme - Color Hunt Palette */
+  --bg-primary: #EFFFFB;
+  --bg-secondary: #EFFFFB;
+  --bg-tertiary: #F5FFFD;
+  --text-primary: #272727;
+  --text-secondary: #5a5a5a;
+  --accent-blue: #4F98CA;
+  --accent-green: #50D890;
+  --accent-yellow: #F59E0B;
+  --accent-red: #EF4444;
+  --accent-purple: #A855F7;
+  --accent-orange: #F97316;
+  --border: #D5F5EC;
+  --focus-border: #50D890;
+}
+
+[data-theme='dark'] {
+  /* Dark Theme - Black & Grey */
   --bg-primary: #0a0a0a;
   --bg-secondary: #0a0a0a;
   --bg-tertiary: #121212;
@@ -13,23 +30,10 @@
   --accent-green: #10b981;
   --accent-yellow: #f59e0b;
   --accent-red: #ef4444;
+  --accent-purple: #a855f7;
+  --accent-orange: #f97316;
   --border: #1f1f1f;
   --focus-border: #3b82f6;
-}
-
-[data-theme='light'] {
-  /* Beautified Light Theme - White & Grey */
-  --bg-primary: #ffffff;
-  --bg-secondary: #ffffff;
-  --bg-tertiary: #fafafa;
-  --text-primary: #111827;
-  --text-secondary: #6b7280;
-  --accent-blue: #2563eb;
-  --accent-green: #059669;
-  --accent-yellow: #d97706;
-  --accent-red: #dc2626;
-  --border: #e5e7eb;
-  --focus-border: #2563eb;
 }
 
 * {
@@ -62,21 +66,21 @@ code {
 
 /* Scrollbar styling */
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--bg-secondary);
+  background: var(--bg-primary);
 }
 
 ::-webkit-scrollbar-thumb {
   background: var(--border);
-  border-radius: 5px;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--text-secondary);
+  background: var(--accent-green);
 }
 
 /* Focus states */
@@ -124,23 +128,23 @@ code {
 
 /* Card styling */
 .card-question {
-  border-left: 2px solid var(--accent-yellow);
+  border-left: 3px solid var(--accent-yellow);
 }
 
 .card-context {
-  border-left: 2px solid var(--accent-blue);
+  border-left: 3px solid var(--accent-blue);
 }
 
 .card-completion {
-  border-left: 2px solid var(--accent-green);
+  border-left: 3px solid var(--accent-green);
 }
 
 .card-math {
-  border-left: 2px solid #a855f7; /* Purple accent */
+  border-left: 3px solid var(--accent-purple);
 }
 
 .card-email {
-  border-left: 2px solid #f97316; /* Orange accent */
+  border-left: 3px solid var(--accent-orange);
 }
 
 /* KaTeX rendering styles */
