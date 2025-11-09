@@ -137,3 +137,27 @@ code {
 .card-completion {
   border-left: 3px solid var(--accent-green);
 }
+
+.card-math {
+  border-left: 3px solid #c586c0; /* Purple accent */
+}
+
+.card-email {
+  border-left: 3px solid #ce9178; /* Orange accent */
+}
+
+/* KaTeX rendering styles */
+.markdown-content .katex {
+  font-size: 1.1em;
+}
+
+.markdown-content .katex-display {
+  margin: 1em 0;
+  text-align: center;
+}
+
+/* Ensure KaTeX formulas are visible in dark theme */
+.markdown-content .katex,
+.markdown-content .katex * {
+  color: var(--text-primary) !important;
+}
