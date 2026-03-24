@@ -1,6 +1,8 @@
 # Parallax
 
-A modern terminal-based text editor with integrated AI assistance capabilities, built with Python and Textual.
+A modern terminal and web based text editor with integrated AI assistance capabilities, built with Python and Textual.
+
+![Parallax Editor Demo](./docs/parallax_gif_1_small.gif)
 
 ## Overview
 
